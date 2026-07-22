@@ -104,6 +104,12 @@
   .info-box{background:#eef2f7;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:.83rem;color:var(--suave)}
   .info-box b{color:var(--tinta)}
 
+
+  /* Chips cobranza */
+  .chip-cob{padding:5px 13px;border:1px solid var(--linea);border-radius:20px;background:var(--blanco);font-size:.78rem;font-weight:600;color:var(--suave);cursor:pointer;font-family:inherit;transition:.15s}
+  .chip-cob:hover{background:#eef2f7;color:var(--tinta)}
+  .chip-cob.active{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+
   footer{text-align:center;padding:22px;color:var(--suave);font-size:.75rem;border-top:1px solid var(--linea);margin-top:8px}
 </style>
 </head>
@@ -142,6 +148,7 @@
   <button class="nav-tab" data-sec="salud">Salud</button>
   <button class="nav-tab" data-sec="clientes">Clientes</button>
   <button class="nav-tab" data-sec="vehiculos">Vehículos</button>
+  <button class="nav-tab" data-sec="cobranza-det">💰 Cobranza detalle</button>
 </nav>
 
 <div class="wrap">
@@ -301,6 +308,95 @@
   </div></div>
 </section>
 
+
+<!-- COBRANZA DETALLE -->
+<section id="sec-cobranza-det" class="section">
+
+  <!-- Controles de período -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:14px 20px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="chips-cob">
+          <button class="chip-cob active" data-chip="mes">Este mes</button>
+          <button class="chip-cob" data-chip="mesant">Mes anterior</button>
+          <button class="chip-cob" data-chip="trim">Últimos 3 meses</button>
+          <button class="chip-cob" data-chip="año">Este año</button>
+          <button class="chip-cob" data-chip="todo">Todo</button>
+        </div>
+        <span style="color:var(--linea);font-size:1.1rem">|</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:.78rem;font-weight:600;color:var(--suave)">Del</label>
+          <input type="date" id="cob-desde" class="isel">
+          <label style="font-size:.78rem;font-weight:600;color:var(--suave)">al</label>
+          <input type="date" id="cob-hasta" class="isel">
+          <button class="btn" id="btn-cob-aplicar">Aplicar</button>
+        </div>
+        <button class="btn ghost" id="btn-cob-excel">⬇️ Exportar Excel</button>
+      </div>
+      <div style="margin-top:10px;font-size:.8rem;color:var(--suave)">Período activo: <b id="cob-periodo-lbl">—</b> · <b id="cob-total-regs">—</b> pagos · Total: <b id="cob-total-monto" style="color:var(--verde)">—</b></div>
+    </div>
+  </div>
+
+  <!-- KPIs del período -->
+  <div class="grid4" style="margin-bottom:20px" id="kpis-cob-det"></div>
+
+  <!-- Gráfica diaria y por canal -->
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-head"><h2>Cobranza por día</h2></div>
+      <div class="card-body"><canvas id="chart-cob-dia" height="200"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Por canal de pago</h2></div>
+      <div class="card-body"><canvas id="chart-cob-canal" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Por banco y por día de semana -->
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-head"><h2>Ingresos por cuenta bancaria</h2></div>
+      <div class="card-body" id="banco-bars"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Cobranza por día de la semana</h2></div>
+      <div class="card-body"><canvas id="chart-cob-diasem" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Tabla de detalle -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Detalle de pagos del período</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="fil-cob-canal" class="isel">
+          <option value="">Todos los canales</option>
+          <option value="Cobrador">Cobrador</option>
+          <option value="Depósito Banorte">Depósito Banorte</option>
+          <option value="Depósito Scotiabank">Depósito Scotiabank</option>
+          <option value="Depósito Inbursa">Depósito Inbursa</option>
+          <option value="Cobro asesor">Cobro asesor</option>
+          <option value="Pago en oficina">Pago en oficina</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Depósito OXXO">Depósito OXXO</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <input type="search" id="fil-cob-busq" class="isel" placeholder="Buscar póliza, nota…" style="min-width:180px">
+      </div>
+    </div>
+    <div class="tbl-wrap" style="max-height:480px">
+      <table>
+        <thead><tr>
+          <th>Fecha pago</th><th>Póliza</th><th>Recibo</th>
+          <th>Canal</th><th>Nota original</th><th class="money">Monto</th>
+        </tr></thead>
+        <tbody id="tbody-cob-det"></tbody>
+      </table>
+    </div>
+    <div style="padding:10px 16px;font-size:.78rem;color:var(--suave)" id="cob-det-pie">Mostrando — de — registros</div>
+  </div>
+</section>
+
 </div><!-- /wrap -->
 <footer id="footer-fecha">Arts Nova MutuClub · Dashboard de Cartera</footer>
 
@@ -383,11 +479,13 @@ async function cargarDatos(){
   }
   lbar(35,'Leyendo Bd Clientes…');
   const wb = XLSX.read(ab,{type:'array',cellDates:true});
+  window._WB_LOADED = wb;  // guardar workbook para sección de cobranza
   const ws = wb.Sheets['Bd Clientes'];
   const raw = XLSX.utils.sheet_to_json(ws,{defval:null});
   lbar(60,'Calculando indicadores…');
   await new Promise(r=>setTimeout(r,0));
   procesar(raw);
+  if(window._initCobDet) window._initCobDet(wb);
   lbar(100,'Listo');
   setTimeout(()=>{ $('loader').style.display='none'; },400);
 }
@@ -811,6 +909,248 @@ document.querySelectorAll('.nav-tab').forEach(btn=>{
    ARRANQUE
 ══════════════════════════════════════════════════ */
 cargarDatos();
+
+/* ════════ COBRANZA DETALLE ════════ */
+(()=>{
+  // Se inicializa cuando se carga la sección por primera vez
+  let _cobInit = false;
+  let _cobRows = [];   // todos los pagos combinados (Bd Pagos + Pagos Historicos)
+  let _cobFiltrados = [];
+
+  const HOY_COB = new Date('2026-07-22');
+
+  function cobFechaISO(d){
+    if(!d) return '';
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
+  function clasificarCanal(nota){
+    const n = (nota||'').toUpperCase().trim();
+    if(n.includes('BANORTE')) return 'Depósito Banorte';
+    if(n.includes('SCOTIABANK')||n.includes('SCOTIAB')||n.includes('SCOTIAN')||n.includes('SCOTANB')||n.includes('SOCITAB')) return 'Depósito Scotiabank';
+    if(n.includes('INBURSA')||n.includes('INBUSA')) return 'Depósito Inbursa';
+    if(n.includes('OXXO')) return 'Depósito OXXO';
+    if(n.includes('PAGO EN OFICINA')||n === 'OFICINA') return 'Pago en oficina';
+    if(n.includes('TRANSFERENCIA')) return 'Transferencia';
+    if(n.includes('DEPOSITO A ASESOR')||n.includes('COBRO ASESOR')||(n.includes('ASESOR')&&!n.includes('DEPOSITO'))) return 'Cobro asesor';
+    const COBRADORES = ['EDUARDO GONZALEZ','HECTOR ALONSO','JOSE RODRIGUEZ','OSCAR ADRIAN','JESUS RUIZ','JORGE ALBERTO CRUZ','CARMEN SOLORZANO','HECTOR RAMON','BENITO JUAN','CARLOS FUENTES','ULISES YAVET','ALFREDO RAUF','MARIA DEL ROSARIO','ANGELICA MARIA','ROSALBA GARCIA','RAFAEL MUÑOZ','ALEJANDRO BERNAL','GLORIA NOHEMI','CARMEN MEDRANO','ARACELI DIAZ','AYDEE DE LOERA','FORTINO PANZO','MARCELINO RIOS','RODOLFO BARAJAS','FRANCISCO GOMEZ','MYRIAM FABIOLA','GILBERTO GUILLEN','MARIO URIEL','SALAZAR','VICTOR VARGAS','ERNESTINA','GUADALUPE PONCE'];
+    if(COBRADORES.some(c=>n.includes(c))) return 'Cobrador';
+    if(!n||n==='NAN') return 'Sin clasificar';
+    return 'Otro';
+  }
+
+  function clasificarBanco(nota){
+    const n=(nota||'').toUpperCase();
+    if(n.includes('BANORTE')) return 'Banorte';
+    if(n.includes('SCOTIABANK')||n.includes('SCOTIAB')||n.includes('SCOTIAN')) return 'Scotiabank';
+    if(n.includes('INBURSA')||n.includes('INBUSA')) return 'Inbursa';
+    if(n.includes('OXXO')) return 'OXXO (Scotiabank)';
+    return null;
+  }
+
+  function initCobRows(wb){
+    // wb es el workbook de SheetJS ya leído
+    const sheetsDisp = wb ? wb.SheetNames : [];
+    let rows = [];
+    ['Bd Pagos','Pagos Historicos'].forEach(sh=>{
+      if(!sheetsDisp.includes(sh)) return;
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[sh],{defval:null,raw:false});
+      data.forEach(r=>{
+        const monto = Number(r['Monto de Pago']||0);
+        if(monto <= 0) return;
+        let fecha = r['Fecha Pago'];
+        if(!fecha) return;
+        if(typeof fecha === 'string') fecha = new Date(fecha);
+        if(!(fecha instanceof Date)||isNaN(fecha)) return;
+        const nota = String(r['Notas']||'').trim();
+        rows.push({
+          fecha, monto,
+          poliza: String(r['IdPoliza']||''),
+          recibo: String(r['Número de Recibo']||''),
+          nota,
+          canal: clasificarCanal(nota),
+          banco: clasificarBanco(nota),
+          fuente: sh==='Bd Pagos'?'Operación':'Histórico',
+          fechaISO: cobFechaISO(fecha),
+          diaSem: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][fecha.getDay()],
+        });
+      });
+    });
+    rows.sort((a,b)=>b.fecha-a.fecha);
+    _cobRows = rows;
+  }
+
+  function setRango(desde, hasta, chip){
+    document.getElementById('cob-desde').value = desde;
+    document.getElementById('cob-hasta').value = hasta;
+    document.querySelectorAll('.chip-cob').forEach(b=>b.classList.remove('active'));
+    if(chip) document.querySelector(`.chip-cob[data-chip="${chip}"]`)?.classList.add('active');
+    renderCobDet();
+  }
+
+  function chipRango(chip){
+    const h = HOY_COB;
+    const iso = d => cobFechaISO(d);
+    if(chip==='mes'){
+      const d=new Date(h.getFullYear(),h.getMonth(),1);
+      return [iso(d), iso(h)];
+    }
+    if(chip==='mesant'){
+      const d=new Date(h.getFullYear(),h.getMonth()-1,1);
+      const f=new Date(h.getFullYear(),h.getMonth(),0);
+      return [iso(d),iso(f)];
+    }
+    if(chip==='trim'){
+      const d=new Date(h); d.setMonth(d.getMonth()-3);
+      return [iso(d),iso(h)];
+    }
+    if(chip==='año'){
+      return [h.getFullYear()+'-01-01', iso(h)];
+    }
+    if(chip==='todo') return ['2022-01-01', iso(h)];
+    return [iso(h),iso(h)];
+  }
+
+  function renderCobDet(){
+    const desde = document.getElementById('cob-desde').value;
+    const hasta = document.getElementById('cob-hasta').value;
+    const filtroCanal = document.getElementById('fil-cob-canal').value;
+    const busq = (document.getElementById('fil-cob-busq').value||'').toLowerCase();
+
+    let datos = _cobRows.filter(r=>{
+      if(desde && r.fechaISO < desde) return false;
+      if(hasta && r.fechaISO > hasta) return false;
+      if(filtroCanal && r.canal !== filtroCanal) return false;
+      if(busq && !r.poliza.includes(busq) && !r.nota.toLowerCase().includes(busq) && !r.recibo.toLowerCase().includes(busq)) return false;
+      return true;
+    });
+    _cobFiltrados = datos;
+
+    const totalMonto = datos.reduce((a,r)=>a+r.monto,0);
+    const periodoLbl = desde===hasta ? desde : `${desde} → ${hasta}`;
+    document.getElementById('cob-periodo-lbl').textContent = periodoLbl;
+    document.getElementById('cob-total-regs').textContent = fmtN(datos.length);
+    document.getElementById('cob-total-monto').textContent = fmtM(totalMonto);
+
+    // KPIs
+    const canales = {};
+    datos.forEach(r=>{ canales[r.canal]=(canales[r.canal]||0)+r.monto; });
+    const topCanal = Object.entries(canales).sort((a,b)=>b[1]-a[1])[0];
+    const bancos = {};
+    datos.filter(r=>r.banco).forEach(r=>{ bancos[r.banco]=(bancos[r.banco]||0)+r.monto; });
+    const topBanco = Object.entries(bancos).sort((a,b)=>b[1]-a[1])[0];
+    const ticketProm = datos.length ? totalMonto/datos.length : 0;
+    document.getElementById('kpis-cob-det').innerHTML = [
+      {cls:'verde',  n: fmtM(totalMonto),   l:'Total cobrado',      s: fmtN(datos.length)+' pagos'},
+      {cls:'azul',   n: fmtM(canales['Cobrador']||0), l:'Vía cobrador', s: fmtPct((canales['Cobrador']||0)/totalMonto*100)+' del total'},
+      {cls:'morado', n: fmtM((canales['Depósito Banorte']||0)+(canales['Depósito Scotiabank']||0)+(canales['Depósito Inbursa']||0)+(canales['Depósito OXXO']||0)), l:'Vía depósito bancario', s: topBanco?'Banco líder: '+topBanco[0]:'—'},
+      {cls:'ambar',  n: fmtM(ticketProm),   l:'Ticket promedio',    s:'Por pago individual'},
+    ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+
+    // Gráfica por día
+    const byDia = {};
+    datos.forEach(r=>{ byDia[r.fechaISO]=(byDia[r.fechaISO]||0)+r.monto; });
+    const diasArr = Object.entries(byDia).sort(([a],[b])=>a.localeCompare(b));
+    const MAX_DIAS = 90;
+    const diasMuestra = diasArr.length>MAX_DIAS ? diasArr.slice(-MAX_DIAS) : diasArr;
+    newChart('chart-cob-dia',{
+      type: diasMuestra.length>31?'line':'bar',
+      data:{labels:diasMuestra.map(([d])=>d.slice(5)),
+        datasets:[{label:'Cobrado',data:diasMuestra.map(([,v])=>v),
+          backgroundColor:'rgba(26,111,175,.6)',borderColor:'#1a6faf',
+          fill:diasMuestra.length>31,tension:.3,borderRadius:4,pointRadius:diasMuestra.length>31?2:0}]},
+      options:{responsive:true,scales:{x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:20}},
+        y:{grid:{color:'#eef1f5'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K'}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Cobrado: '+fmtM(c.raw)}}}}
+    });
+
+    // Gráfica por canal
+    const canalArr = Object.entries(canales).sort((a,b)=>b[1]-a[1]);
+    const CANAL_COL = {'Cobrador':'#1a6faf','Depósito Banorte':'#1e7a4d','Depósito Scotiabank':'#5b3a9e','Cobro asesor':'#c77800','Pago en oficina':'#0f2740','Depósito Inbursa':'#2eabd1','Transferencia':'#e67e22','Depósito OXXO':'#c0392b','Otro':'#95a5a6','Sin clasificar':'#bdc3c7'};
+    newChart('chart-cob-canal',{
+      type:'doughnut',
+      data:{labels:canalArr.map(d=>d[0]),datasets:[{data:canalArr.map(d=>d[1]),backgroundColor:canalArr.map(d=>CANAL_COL[d[0]]||'#888'),borderWidth:2,borderColor:'#fff'}]},
+      options:{plugins:{legend:{position:'right',labels:{font:{size:11},padding:10,boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtM(c.raw)} (${fmtPct(c.raw/totalMonto*100)})`}}},cutout:'58%'}
+    });
+
+    // Barras por banco
+    const bancoArr = Object.entries(bancos).sort((a,b)=>b[1]-a[1]).map(([banco,monto])=>({banco,monto}));
+    hbars('banco-bars', bancoArr, 'banco', 'monto', i=>['#1e7a4d','#5b3a9e','#2eabd1','#c77800'][i]);
+
+    // Por día de la semana
+    const DS_ORDER = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    const byDS = {};
+    datos.forEach(r=>{ byDS[r.diaSem]=(byDS[r.diaSem]||0)+r.monto; });
+    newChart('chart-cob-diasem',{
+      type:'bar',
+      data:{labels:DS_ORDER,datasets:[{label:'Cobrado',data:DS_ORDER.map(d=>byDS[d]||0),backgroundColor:DS_ORDER.map((_,i)=>i<5?'#1a6faf':'#c77800'),borderRadius:5}]},
+      options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:{color:'#eef1f5'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Cobrado: '+fmtM(c.raw)}}}}
+    });
+
+    // Tabla detalle (máx 500)
+    const MAX_TBL = 500;
+    const muestra = datos.slice(0,MAX_TBL);
+    const CANAL_PILL = {'Cobrador':'azul','Depósito Banorte':'verde','Depósito Scotiabank':'morado','Depósito Inbursa':'ambar','Cobro asesor':'ambar','Pago en oficina':'tinta','Transferencia':'verde','Depósito OXXO':'rojo'};
+    document.getElementById('tbody-cob-det').innerHTML = muestra.map(r=>{
+      const pillC = CANAL_PILL[r.canal]||'suave';
+      const pillStyle = `background:var(--${pillC}-cl,#eef2f7);color:var(--${pillC},#5b6b7d)`;
+      return `<tr>
+        <td>${r.fechaISO}</td>
+        <td><b>${r.poliza}</b></td>
+        <td style="font-size:.78rem;color:var(--suave)">${r.recibo||'—'}</td>
+        <td><span class="pill" style="${pillStyle}">${r.canal}</span></td>
+        <td style="max-width:220px;white-space:normal;font-size:.76rem;color:var(--suave)">${r.nota.substring(0,60)}</td>
+        <td class="money" style="color:var(--verde)">$${r.monto.toLocaleString('es-MX')}</td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--suave)">Sin pagos en el período seleccionado</td></tr>';
+    document.getElementById('cob-det-pie').textContent = `Mostrando ${Math.min(datos.length,MAX_TBL).toLocaleString('es-MX')} de ${datos.length.toLocaleString('es-MX')} registros`;
+  }
+
+  // Exportar Excel
+  document.getElementById('btn-cob-excel').addEventListener('click',()=>{
+    if(!_cobFiltrados.length){ alert('No hay datos para exportar.'); return; }
+    const ws = XLSX.utils.json_to_sheet(_cobFiltrados.map(r=>({'Fecha':r.fechaISO,'Póliza':r.poliza,'Recibo':r.recibo,'Canal':r.canal,'Banco':r.banco||'—','Nota original':r.nota,'Monto':r.monto,'Fuente':r.fuente})));
+    const wb2 = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb2,ws,'Cobranza');
+    XLSX.writeFile(wb2,'cobranza_detalle.xlsx');
+  });
+
+  // Eventos de chips
+  document.querySelectorAll('.chip-cob').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const [d,h] = chipRango(btn.dataset.chip);
+      setRango(d,h,btn.dataset.chip);
+    });
+  });
+  document.getElementById('btn-cob-aplicar').addEventListener('click',()=>{
+    document.querySelectorAll('.chip-cob').forEach(b=>b.classList.remove('active'));
+    renderCobDet();
+  });
+  document.getElementById('fil-cob-canal').addEventListener('change', renderCobDet);
+  document.getElementById('fil-cob-busq').addEventListener('input', renderCobDet);
+
+  // Inicializar cuando se hace clic en la pestaña
+  document.querySelector('[data-sec="cobranza-det"]').addEventListener('click',()=>{
+    if(!_cobInit && window._WB_LOADED){
+      initCobRows(window._WB_LOADED);
+      _cobInit = true;
+      const [d,h] = chipRango('mes');
+      setRango(d,h,'mes');
+    }
+  });
+
+  // También inicializar si los datos ya están disponibles al cargar la sección
+  window._initCobDet = function(wb){
+    window._WB_LOADED = wb;
+    if(document.getElementById('sec-cobranza-det').classList.contains('active')){
+      initCobRows(wb);
+      _cobInit = true;
+      const [d,h] = chipRango('mes');
+      setRango(d,h,'mes');
+    }
+  };
+})();
+
 </script>
 </body>
 </html>
