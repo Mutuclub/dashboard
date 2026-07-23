@@ -209,10 +209,162 @@
 
 <!-- COBRADORES -->
 <section id="sec-cobradores" class="section">
-  <div class="card" style="margin-bottom:20px"><div class="card-head"><h2>Pólizas por cobrador</h2></div><div class="card-body" id="cobrador-bars"></div></div>
-  <div class="card"><div class="card-head"><h2>Detalle</h2></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Cobrador</th><th class="num">Pólizas</th><th class="num">Canceladas</th><th class="num">Tasa cancel.</th></tr></thead><tbody id="tbody-cobradores"></tbody></table></div>
+
+  <!-- Selector de cobrador -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:14px 20px">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="font-size:.85rem;font-weight:700;color:var(--tinta)">Cobrador:</span>
+        <select id="sel-cobrador" class="isel" style="min-width:260px;font-size:.85rem">
+          <option value="">— Todos (resumen general) —</option>
+        </select>
+        <span style="font-size:.78rem;color:var(--suave)" id="cob-info-badge"></span>
+      </div>
+    </div>
   </div>
+
+  <!-- Vista RESUMEN GENERAL (cuando no hay cobrador seleccionado) -->
+  <div id="cob-vista-general">
+    <div class="card" style="margin-bottom:20px"><div class="card-head"><h2>Distribución de cartera por cobrador</h2></div><div class="card-body" id="cobrador-bars"></div></div>
+    <div class="card"><div class="card-head"><h2>Tabla comparativa de cobradores</h2></div>
+      <div class="tbl-wrap"><table><thead><tr>
+        <th>#</th><th>Cobrador</th>
+        <th class="num">Total pólizas</th><th class="num">Vigentes</th><th class="num">Atrasadas</th>
+        <th class="num">Problema</th><th class="num">Cancel. pago</th><th class="num">Cancel. manual</th>
+        <th class="num">Sin pago</th><th class="num">Tasa cancel.</th><th class="num">Eficiencia</th>
+      </tr></thead><tbody id="tbody-cobradores"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- Vista PERFIL INDIVIDUAL -->
+  <div id="cob-vista-perfil" style="display:none">
+
+    <!-- KPIs principales -->
+    <div class="grid4" style="margin-bottom:20px" id="cob-kpis"></div>
+
+    <!-- Segunda fila KPIs -->
+    <div class="grid4" style="margin-bottom:20px" id="cob-kpis2"></div>
+
+    <!-- Estatus de cartera -->
+    <div class="grid2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-head"><h2>Distribución de cartera asignada</h2></div>
+        <div class="card-body"><canvas id="cob-donut-estatus" height="200"></canvas>
+          <div id="cob-leyenda-estatus" style="margin-top:12px;display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Antigüedad del último pago (pólizas activas)</h2></div>
+        <div class="card-body"><canvas id="cob-chart-dias" height="200"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Pólizas sin pago alguno -->
+    <div class="grid2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-head">
+          <h2>⚠️ Sin ningún pago — No vencidas</h2>
+          <span class="pill pill-ambar" id="cob-badge-sinpago-act">0</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table><thead><tr><th>Póliza</th><th>Nombre</th><th class="num">Días vigente</th><th>Vence</th><th class="money">Costo</th></tr></thead>
+          <tbody id="cob-tbody-sinpago-act"></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>🔴 Sin ningún pago — Vencidas/Canceladas</h2>
+          <span class="pill pill-rojo" id="cob-badge-sinpago-can">0</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table><thead><tr><th>Póliza</th><th>Nombre</th><th class="num">Días vida</th><th>Estado</th><th class="money">Costo</th></tr></thead>
+          <tbody id="cob-tbody-sinpago-can"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Último pago: bandas de tiempo -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-head"><h2>📅 Pólizas por antigüedad del último pago</h2>
+        <span style="font-size:.78rem;color:var(--suave)">Solo pólizas activas con al menos un pago</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:2px solid var(--linea)">
+        <div style="padding:12px 16px;border-right:1px solid var(--linea);text-align:center">
+          <div style="font-size:1.5rem;font-weight:800;color:var(--verde)" id="cob-cnt-7d">—</div>
+          <div style="font-size:.7rem;font-weight:700;color:var(--suave);text-transform:uppercase;margin-top:2px">Último pago ≤7 días</div>
+        </div>
+        <div style="padding:12px 16px;border-right:1px solid var(--linea);text-align:center">
+          <div style="font-size:1.5rem;font-weight:800;color:var(--azul)" id="cob-cnt-14d">—</div>
+          <div style="font-size:.7rem;font-weight:700;color:var(--suave);text-transform:uppercase;margin-top:2px">8 – 14 días</div>
+        </div>
+        <div style="padding:12px 16px;border-right:1px solid var(--linea);text-align:center">
+          <div style="font-size:1.5rem;font-weight:800;color:var(--ambar)" id="cob-cnt-30d">—</div>
+          <div style="font-size:.7rem;font-weight:700;color:var(--suave);text-transform:uppercase;margin-top:2px">15 – 30 días</div>
+        </div>
+        <div style="padding:12px 16px;text-align:center">
+          <div style="font-size:1.5rem;font-weight:800;color:var(--rojo)" id="cob-cnt-60d">—</div>
+          <div style="font-size:.7rem;font-weight:700;color:var(--suave);text-transform:uppercase;margin-top:2px">Más de 30 días</div>
+        </div>
+      </div>
+      <div class="grid2" style="gap:0">
+        <div class="tbl-wrap" style="max-height:320px;border-right:1px solid var(--linea)">
+          <table><thead><tr><th colspan="4" style="background:#f0faf4;color:var(--verde)">≤7 días — Al corriente</th></tr>
+            <tr><th>Póliza</th><th>Nombre</th><th class="num">Días</th><th>Vence</th></tr></thead>
+          <tbody id="cob-tbody-7d"></tbody></table>
+        </div>
+        <div class="tbl-wrap" style="max-height:320px">
+          <table><thead><tr><th colspan="4" style="background:#fef9ec;color:var(--ambar)">15–30 días — Atención</th></tr>
+            <tr><th>Póliza</th><th>Nombre</th><th class="num">Días</th><th>Vence</th></tr></thead>
+          <tbody id="cob-tbody-30d"></tbody></table>
+        </div>
+      </div>
+      <div class="tbl-wrap" style="max-height:320px;border-top:1px solid var(--linea)">
+        <table><thead><tr><th colspan="5" style="background:#fdf0ee;color:var(--rojo)">Más de 30 días sin pago — Riesgo alto</th></tr>
+          <tr><th>Póliza</th><th>Nombre</th><th class="num">Días sin pago</th><th>Vence</th><th class="money">Costo</th></tr></thead>
+        <tbody id="cob-tbody-60d"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Cancelaciones de este cobrador -->
+    <div class="grid2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-head"><h2>Cancelaciones — Motivos</h2></div>
+        <div class="card-body" id="cob-motivos-bars"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Municipios de la cartera</h2></div>
+        <div class="card-body" id="cob-muni-bars"></div>
+      </div>
+    </div>
+
+    <!-- Listado completo -->
+    <div class="card">
+      <div class="card-head">
+        <h2>Listado completo de pólizas asignadas</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="cob-fil-estatus" class="isel">
+            <option value="">Todos los estatus</option>
+            <option value="vigente">Vigentes</option>
+            <option value="atrasada">Atrasadas</option>
+            <option value="problema">En problema</option>
+            <option value="cancelada-pago">Cancel. por pago</option>
+            <option value="cancelada-manual">Cancel. manual</option>
+          </select>
+          <input type="search" id="cob-fil-busq" class="isel" placeholder="Buscar póliza o nombre…" style="min-width:180px">
+        </div>
+      </div>
+      <div class="tbl-wrap" style="max-height:500px">
+        <table><thead><tr>
+          <th>Póliza</th><th>Nombre</th><th>Municipio</th><th>Cobertura</th>
+          <th class="num">Pagos</th><th class="num">Últ. pago</th><th class="num">Días</th>
+          <th>Vence</th><th class="money">Costo</th><th>Estatus</th>
+        </tr></thead>
+        <tbody id="cob-tbody-lista"></tbody></table>
+      </div>
+      <div style="padding:10px 16px;font-size:.78rem;color:var(--suave)" id="cob-lista-pie">—</div>
+    </div>
+
+  </div><!-- /perfil -->
 </section>
 
 <!-- CANCELACIONES -->
@@ -662,11 +814,186 @@ function renderAsesores(rows, activas, canceladas){
 
 /* ══ COBRADORES ══ */
 function renderCobradores(rows){
+  window._cobRows = rows;
+  const PAGO_M = Array.from({length:20},(_,i)=>`Monto de Pago ${String(i+1).padStart(2,'0')}`);
+  const PAGO_F = Array.from({length:20},(_,i)=>`Fecha Pago ${String(i+1).padStart(2,'0')}`);
+
+  function ultimoPago(r){
+    let lastF=null;
+    for(let i=0;i<20;i++){
+      const m=Number(r[PAGO_M[i]]||0);
+      const f=parseDate(r[PAGO_F[i]]);
+      if(m>0&&f){if(!lastF||f>lastF)lastF=f;}
+    }
+    return lastF;
+  }
+  function clasificar(r){
+    if(r._cancelada){
+      const mot=(r['Cancela Motivo']||'').toUpperCase();
+      if(mot.includes('FALTA DE PAGO')) return 'cancelada-pago';
+      return 'cancelada-manual';
+    }
+    const d=r._diasUltPago;
+    if(r._nPagos===0) return 'problema';
+    if(d!==null&&d>30) return 'atrasada';
+    return 'vigente';
+  }
+  rows.forEach(r=>{
+    r._ultimoPago=ultimoPago(r);
+    r._diasUltPago=r._ultimoPago?daysDiff(r._ultimoPago,HOY):null;
+    r._clasificacion=clasificar(r);
+  });
+
   const map={};
-  rows.forEach(r=>{ const c=r._cobrador||'Sin asignar'; if(!map[c]) map[c]={total:0,canceladas:0}; map[c].total++; if(r._cancelada) map[c].canceladas++; });
-  const arr=Object.entries(map).map(([Cobrador,v])=>({Cobrador,...v,tasa_cancel:v.canceladas/v.total*100})).sort((a,b)=>b.total-a.total).slice(0,10);
-  hbars('cobrador-bars',arr,'Cobrador','total',i=>PALETA[i%PALETA.length]);
-  $('tbody-cobradores').innerHTML=arr.map(d=>`<tr><td><b>${d.Cobrador}</b></td><td class="num">${fmtN(d.total)}</td><td class="num" style="color:var(--rojo)">${fmtN(d.canceladas)}</td><td class="num">${pillaCancel(d.tasa_cancel)}</td></tr>`).join('');
+  rows.forEach(r=>{
+    const c=r._cobrador||'Sin asignar';
+    if(!map[c]) map[c]={total:0,vigentes:0,atrasadas:0,problema:0,cancelPago:0,cancelManual:0,sinPago:0,canceladas:0};
+    map[c].total++;
+    if(r._cancelada) map[c].canceladas++;
+    const cl=r._clasificacion;
+    if(cl==='vigente')          map[c].vigentes++;
+    if(cl==='atrasada')         map[c].atrasadas++;
+    if(cl==='problema')         map[c].problema++;
+    if(cl==='cancelada-pago')   map[c].cancelPago++;
+    if(cl==='cancelada-manual') map[c].cancelManual++;
+    if(r._nPagos===0&&!r._cancelada) map[c].sinPago++;
+  });
+  const arr=Object.entries(map).map(([Cobrador,v])=>({
+    Cobrador,...v,
+    tasa_cancel:v.canceladas/v.total*100,
+    eficiencia:v.total>0?Math.round((v.vigentes+v.atrasadas)/Math.max(v.total-v.cancelManual,1)*100):0
+  })).sort((a,b)=>b.total-a.total);
+  window._cobradoresArr=arr;
+
+  hbars('cobrador-bars',arr.slice(0,12),'Cobrador','total',i=>PALETA[i%PALETA.length]);
+  $('tbody-cobradores').innerHTML=arr.map((d,i)=>{
+    const ef=d.eficiencia;
+    const ec=ef>=80?'verde':ef>=60?'ambar':'rojo';
+    return `<tr>
+      <td style="color:var(--suave)">${i+1}</td>
+      <td><b style="cursor:pointer;color:var(--azul);text-decoration:underline" onclick="mostrarPerfilCobrador('${d.Cobrador.replace(/'/g,"\\'")}')">${d.Cobrador}</b></td>
+      <td class="num"><b>${fmtN(d.total)}</b></td>
+      <td class="num" style="color:var(--verde)">${fmtN(d.vigentes)}</td>
+      <td class="num" style="color:var(--ambar)">${fmtN(d.atrasadas)}</td>
+      <td class="num" style="color:var(--rojo)">${fmtN(d.problema)}</td>
+      <td class="num" style="color:var(--rojo)">${fmtN(d.cancelPago)}</td>
+      <td class="num" style="color:var(--suave)">${fmtN(d.cancelManual)}</td>
+      <td class="num" style="color:var(--ambar)">${fmtN(d.sinPago)}</td>
+      <td class="num">${pillaCancel(d.tasa_cancel)}</td>
+      <td class="num"><span class="pill pill-${ec}">${ef}%</span></td>
+    </tr>`;
+  }).join('');
+
+  const sel=$('sel-cobrador');
+  arr.forEach(d=>{const o=document.createElement('option');o.value=d.Cobrador;o.textContent=d.Cobrador+' ('+fmtN(d.total)+')';sel.appendChild(o);});
+  sel.addEventListener('change',()=>{const v=sel.value;if(!v)mostrarVistaCobrador('general');else mostrarPerfilCobrador(v);});
+}
+
+function mostrarVistaCobrador(modo){
+  $('cob-vista-general').style.display=modo==='general'?'':'none';
+  $('cob-vista-perfil').style.display =modo==='perfil' ?'':'none';
+  $('cob-info-badge').textContent='';
+}
+
+function mostrarPerfilCobrador(nombre){
+  $('sel-cobrador').value=nombre;
+  mostrarVistaCobrador('perfil');
+  const rows=window._cobRows||[];
+  const mis=rows.filter(r=>(r._cobrador||'Sin asignar')===nombre);
+  if(!mis.length){$('cob-info-badge').textContent='Sin datos';return;}
+
+  const vigentes  =mis.filter(r=>r._clasificacion==='vigente');
+  const atrasadas =mis.filter(r=>r._clasificacion==='atrasada');
+  const problema  =mis.filter(r=>r._clasificacion==='problema');
+  const canPago   =mis.filter(r=>r._clasificacion==='cancelada-pago');
+  const canManual =mis.filter(r=>r._clasificacion==='cancelada-manual');
+  const activas   =mis.filter(r=>!r._cancelada);
+  const canceladas=mis.filter(r=>r._cancelada);
+  const sinPagoAct=activas.filter(r=>r._nPagos===0);
+  const sinPagoCan=canceladas.filter(r=>r._nPagos===0);
+
+  $('cob-info-badge').textContent=fmtN(mis.length)+' p\u00f3lizas asignadas';
+
+  $('cob-kpis').innerHTML=[
+    {cls:'tinta',n:fmtN(mis.length),      l:'Total asignadas',         s:'Cartera hist\u00f3rica'},
+    {cls:'verde',n:fmtN(activas.length),   l:'Activas (no canceladas)', s:fmtPct(activas.length/mis.length*100)+' de retenci\u00f3n'},
+    {cls:'rojo', n:fmtN(canceladas.length),l:'Canceladas',              s:fmtPct(canceladas.length/mis.length*100)+' tasa cancelaci\u00f3n'},
+    {cls:'azul', n:fmtN(vigentes.length),  l:'Vigentes al corriente',   s:fmtPct(vigentes.length/Math.max(activas.length,1)*100)+' de activas'},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+
+  $('cob-kpis2').innerHTML=[
+    {cls:'ambar', n:fmtN(atrasadas.length),l:'Atrasadas (+30d sin pago)',s:fmtPct(atrasadas.length/Math.max(activas.length,1)*100)+' de activas'},
+    {cls:'rojo',  n:fmtN(problema.length), l:'En problema (sin pagos)', s:'Riesgo alto de cancelaci\u00f3n'},
+    {cls:'rojo',  n:fmtN(canPago.length),  l:'Cancel. por falta pago',  s:fmtPct(canPago.length/Math.max(canceladas.length,1)*100)+' de canceladas'},
+    {cls:'morado',n:fmtN(canManual.length),l:'Cancel. manual/otro',     s:fmtPct(canManual.length/Math.max(canceladas.length,1)*100)+' de canceladas'},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-n">${k.n}</div><div class="kpi-l">${k.l}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+
+  const estatusData=[
+    {l:'Vigentes',     n:vigentes.length,   c:'#1e7a4d'},
+    {l:'Atrasadas',    n:atrasadas.length,  c:'#c77800'},
+    {l:'Problema',     n:problema.length,   c:'#c0392b'},
+    {l:'Cancel. pago', n:canPago.length,    c:'#e74c3c'},
+    {l:'Cancel. manual',n:canManual.length, c:'#95a5a6'},
+  ].filter(d=>d.n>0);
+  newChart('cob-donut-estatus',{type:'doughnut',data:{labels:estatusData.map(d=>d.l),datasets:[{data:estatusData.map(d=>d.n),backgroundColor:estatusData.map(d=>d.c),borderWidth:2,borderColor:'#fff'}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtN(c.raw)}`}}},cutout:'60%'}});
+  $('cob-leyenda-estatus').innerHTML=estatusData.map(d=>`<div style="display:flex;align-items:center;gap:8px;font-size:.82rem"><div style="width:12px;height:12px;border-radius:3px;background:${d.c};flex-shrink:0"></div><div style="flex:1">${d.l}</div><b>${fmtN(d.n)}</b><span style="color:var(--suave);font-size:.75rem">${fmtPct(d.n/mis.length*100)}</span></div>`).join('');
+
+  const conPago=activas.filter(r=>r._nPagos>0&&r._diasUltPago!==null);
+  const bandas=[{l:'\u22647d',mn:0,mx:7},{l:'8-14d',mn:8,mx:14},{l:'15-30d',mn:15,mx:30},{l:'31-60d',mn:31,mx:60},{l:'+60d',mn:61,mx:9999}];
+  newChart('cob-chart-dias',{type:'bar',data:{labels:bandas.map(d=>d.l),datasets:[{label:'P\u00f3lizas',data:bandas.map(b=>conPago.filter(r=>r._diasUltPago>=b.mn&&r._diasUltPago<=b.mx).length),backgroundColor:['#1e7a4d','#1a6faf','#c77800','#e67e22','#c0392b'],borderRadius:5}]},
+    options:{responsive:true,scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#eef1f5'}}},plugins:{legend:{display:false}}}});
+
+  const d7 =conPago.filter(r=>r._diasUltPago<=7);
+  const d30=conPago.filter(r=>r._diasUltPago>=15&&r._diasUltPago<=30);
+  const d60=conPago.filter(r=>r._diasUltPago>30);
+  $('cob-cnt-7d').textContent=fmtN(d7.length);
+  $('cob-cnt-14d').textContent=fmtN(conPago.filter(r=>r._diasUltPago>=8&&r._diasUltPago<=14).length);
+  $('cob-cnt-30d').textContent=fmtN(d30.length);
+  $('cob-cnt-60d').textContent=fmtN(d60.length);
+
+  const rowT=r=>`<tr><td><b>${r['IdPoliza']||'\u2014'}</b></td><td style="max-width:160px;white-space:normal;font-size:.79rem">${String(r['Nombre']||'').substring(0,28)}</td><td class="num">${r._diasUltPago!==null?r._diasUltPago+'d':'\u2014'}</td><td style="font-size:.75rem">${r._fin?dateToISO(r._fin):'\u2014'}</td></tr>`;
+  $('cob-tbody-7d').innerHTML=d7.slice(0,80).map(rowT).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--suave);padding:10px">Sin registros</td></tr>';
+  $('cob-tbody-30d').innerHTML=d30.slice(0,80).map(rowT).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--suave);padding:10px">Sin registros</td></tr>';
+  $('cob-tbody-60d').innerHTML=d60.sort((a,b)=>b._diasUltPago-a._diasUltPago).slice(0,150).map(r=>`<tr><td><b>${r['IdPoliza']||'\u2014'}</b></td><td style="max-width:150px;white-space:normal;font-size:.79rem">${String(r['Nombre']||'').substring(0,26)}</td><td class="num" style="color:var(--rojo);font-weight:700">${r._diasUltPago}d</td><td style="font-size:.75rem">${r._fin?dateToISO(r._fin):'\u2014'}</td><td class="money">${fmtM(r._costo)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--suave);padding:10px">Sin registros</td></tr>';
+
+  $('cob-badge-sinpago-act').textContent=fmtN(sinPagoAct.length);
+  $('cob-badge-sinpago-can').textContent=fmtN(sinPagoCan.length);
+  const rowSP=(r,tipo)=>`<tr><td><b>${r['IdPoliza']||'\u2014'}</b></td><td style="max-width:160px;white-space:normal;font-size:.79rem">${String(r['Nombre']||'').substring(0,28)}</td><td class="num" style="color:var(--ambar);font-weight:700">${r._diasVida||'\u2014'}d</td><td>${tipo}</td><td class="money">${fmtM(r._costo)}</td></tr>`;
+  $('cob-tbody-sinpago-act').innerHTML=sinPagoAct.sort((a,b)=>(b._diasVida||0)-(a._diasVida||0)).slice(0,100).map(r=>rowSP(r,'<span class="pill pill-ambar">Activa</span>')).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--suave);padding:10px">Ninguna</td></tr>';
+  $('cob-tbody-sinpago-can').innerHTML=sinPagoCan.sort((a,b)=>(b._diasVida||0)-(a._diasVida||0)).slice(0,100).map(r=>rowSP(r,`<span class="pill pill-rojo">${r._clasificacion==='cancelada-pago'?'F.Pago':'Manual'}</span>`)).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--suave);padding:10px">Ninguna</td></tr>';
+
+  const motiMap={};
+  canceladas.forEach(r=>{const m=(r['Cancela Motivo']||'Sin especificar').substring(0,40);motiMap[m]=(motiMap[m]||0)+1;});
+  const motiArr=Object.entries(motiMap).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([motivo,cantidad])=>({motivo,cantidad}));
+  if(motiArr.length) hbars('cob-motivos-bars',motiArr,'motivo','cantidad',i=>['#c0392b','#e74c3c','#c77800','#1a6faf','#5b3a9e','#1e7a4d','#95a5a6','#bdc3c7'][i]);
+  else $('cob-motivos-bars').innerHTML='<p style="color:var(--suave);font-size:.83rem;padding:10px 0">Sin cancelaciones registradas</p>';
+
+  const muniMap={};
+  activas.forEach(r=>{if(r._municipio)muniMap[r._municipio]=(muniMap[r._municipio]||0)+1;});
+  const muniArr=Object.entries(muniMap).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([municipio,cantidad])=>({municipio,cantidad}));
+  hbars('cob-muni-bars',muniArr,'municipio','cantidad',i=>PALETA[i%PALETA.length]);
+
+  function renderListaCob(){
+    const fEst=$('cob-fil-estatus').value;
+    const fBusq=($('cob-fil-busq').value||'').toLowerCase();
+    const lista=mis.filter(r=>{
+      if(fEst&&r._clasificacion!==fEst) return false;
+      if(fBusq){const hay=(String(r['IdPoliza']||'')+String(r['Nombre']||'')).toLowerCase();if(!hay.includes(fBusq))return false;}
+      return true;
+    }).sort((a,b)=>(b._diasUltPago||999)-(a._diasUltPago||999));
+    const SPILL={'vigente':['verde','Vigente'],'atrasada':['ambar','Atrasada'],'problema':['rojo','Sin pagos'],'cancelada-pago':['rojo','Cancel. pago'],'cancelada-manual':['suave','Cancel. manual']};
+    $('cob-tbody-lista').innerHTML=lista.slice(0,400).map(r=>{
+      const [pc,pl]=SPILL[r._clasificacion]||['suave',r._clasificacion];
+      const ds=r._diasUltPago!==null?r._diasUltPago+'d':'\u2014';
+      const dc=r._diasUltPago===null?'':r._diasUltPago>30?'style="color:var(--rojo);font-weight:700"':r._diasUltPago>14?'style="color:var(--ambar)"':'';
+      return `<tr><td><b>${r['IdPoliza']||'\u2014'}</b></td><td style="max-width:160px;white-space:normal;font-size:.79rem">${String(r['Nombre']||'').substring(0,30)}</td><td style="font-size:.77rem">${(r._municipio||'\u2014').substring(0,16)}</td><td style="font-size:.74rem">${(r._cobertura||'\u2014').substring(0,18)}</td><td class="num">${r._nPagos}</td><td class="num" style="font-size:.77rem">${r._ultimoPago?dateToISO(r._ultimoPago):'Sin pago'}</td><td class="num" ${dc}>${ds}</td><td style="font-size:.75rem">${r._fin?dateToISO(r._fin):'\u2014'}</td><td class="money">${fmtM(r._costo)}</td><td><span class="pill pill-${pc}">${pl}</span></td></tr>`;
+    }).join('')||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--suave)">Sin resultados</td></tr>';
+    $('cob-lista-pie').textContent='Mostrando '+Math.min(lista.length,400)+' de '+lista.length+' p\u00f3lizas';
+  }
+  renderListaCob();
+  $('cob-fil-estatus').onchange=renderListaCob;
+  $('cob-fil-busq').oninput=renderListaCob;
 }
 
 /* ══ CANCELACIONES ══ */
