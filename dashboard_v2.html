@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobranza de Primas · Arts Nova MutuClub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --marino:#003366; --inst:#005A9C; --verde:#28A745; --amarillo:#FFC107; --rojo:#DC3545;
+  --fondo:#EEF1F5; --papel:#FFFFFF; --linea:#D9DFE7; --tinta:#14243A; --suave:#5E6B7D;
+  --verde-bg:#E6F4EA; --amarillo-bg:#FFF6DA; --rojo-bg:#FBE7E9;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--fondo);color:var(--tinta);font-size:15px;line-height:1.45}
+button,select,input{font:inherit}
+:focus-visible{outline:2px solid var(--inst);outline-offset:2px}
+
+/* Barra superior */
+.top{background:var(--marino);color:#fff;padding:14px 20px 0}
+.top-in{max-width:1320px;margin:0 auto}
+.top-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px 16px}
+.marca{font-family:'Source Serif 4',Georgia,serif;font-size:21px;font-weight:700;letter-spacing:.2px}
+.marca span{font-family:'Source Sans 3',sans-serif;font-weight:400;font-size:14px;opacity:.75;margin-left:8px}
+.fecha-datos{font-size:13px;opacity:.8}
+nav.secciones{display:flex;gap:4px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+nav.secciones::-webkit-scrollbar{display:none}
+nav.secciones button{appearance:none;border:0;background:transparent;color:#C9D6E6;padding:10px 14px 11px;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;white-space:nowrap;display:flex;align-items:center;gap:7px}
+nav.secciones button svg{width:17px;height:17px;flex:none}
+nav.secciones button:hover{color:#fff;background:rgba(255,255,255,.07)}
+nav.secciones button[aria-selected="true"]{background:var(--fondo);color:var(--marino)}
+
+.wrap{max-width:1320px;margin:0 auto;padding:16px 20px 40px}
+
+/* Filtros */
+.filtros{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.filtros-cab{display:flex;align-items:center;justify-content:space-between;gap:4px 10px;flex-wrap:wrap}
+.filtros-cab h2{margin:0;font-size:14px;font-weight:700;color:var(--suave)}
+.filtros-cab .activos{font-size:13px;color:var(--inst);font-weight:600}
+.btn-link{appearance:none;border:0;background:none;color:var(--inst);font-weight:600;cursor:pointer;padding:4px 0;font-size:13.5px}
+.btn-link:hover{text-decoration:underline}
+.filtros-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:10px}
+.filtros-grid label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+.filtros-grid select,.filtros-grid input{width:100%;padding:7px 9px;border:1px solid var(--linea);border-radius:7px;background:#fff;color:var(--tinta);font-size:14px}
+.filtros.cerrado .filtros-grid{display:none}
+
+/* Secciones */
+section.vista{display:none}
+section.vista.activa{display:block}
+.sec-tit{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px 14px;margin:2px 0 12px}
+.sec-tit h1{font-family:'Source Serif 4',Georgia,serif;font-size:23px;margin:0;color:var(--marino)}
+.sec-tit p{margin:0;font-size:13.5px;color:var(--suave);max-width:70ch}
+
+.grupo{margin-bottom:18px}
+.grupo h3{font-size:13px;font-weight:700;color:var(--suave);margin:0 0 8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.kpi{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:12px 14px 12px 16px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--linea)}
+.kpi.s-verde::before{background:var(--verde)}
+.kpi.s-amarillo::before{background:var(--amarillo)}
+.kpi.s-rojo::before{background:var(--rojo)}
+.kpi-l{font-size:13px;color:var(--suave);display:flex;align-items:center;gap:6px}
+.kpi-v{font-size:24px;font-weight:700;color:var(--tinta);margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-.2px}
+.kpi-s{font-size:12.5px;color:var(--suave);margin-top:2px}
+.sem{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.sem.verde{background:var(--verde)}.sem.amarillo{background:var(--amarillo)}.sem.rojo{background:var(--rojo)}
+.info{appearance:none;border:1px solid #BFC8D4;background:#fff;color:var(--suave);width:17px;height:17px;border-radius:50%;font-size:11px;font-weight:700;line-height:1;cursor:help;padding:0;margin-left:auto;flex:none}
+.tend{font-size:12.5px;font-weight:700}
+.tend.sube{color:#1E7E34}.tend.baja{color:#B02A37}.tend.igual{color:var(--suave)}
+
+/* Tooltip enriquecido */
+#tip{position:fixed;z-index:50;max-width:290px;background:var(--marino);color:#fff;font-size:13px;line-height:1.4;padding:9px 11px;border-radius:8px;box-shadow:0 6px 18px rgba(0,30,60,.25);pointer-events:none;opacity:0;transition:opacity .12s}
+#tip.ver{opacity:1}
+#tip b{color:#FFD970}
+
+.panel{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.panel h2{font-size:16px;margin:0 0 4px;color:var(--marino)}
+.panel .sub{font-size:13px;color:var(--suave);margin:0 0 12px}
+.dos-col{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+.dos-col.ancha-der{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+@media (max-width:900px){.dos-col{grid-template-columns:1fr}}
+.lienzo{position:relative;height:340px}
+.lienzo.alto{height:380px}
+
+.comparativos{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.comp{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:12px 14px}
+.comp-t{font-size:13px;color:var(--suave)}
+.comp-n{display:flex;align-items:baseline;gap:10px;margin-top:3px;flex-wrap:wrap}
+.comp-n b{font-size:20px;font-variant-numeric:tabular-nums}
+.comp-d{font-size:12.5px;color:var(--suave);margin-top:2px}
+
+.controles{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.controles label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+.controles input,.controles select{padding:7px 9px;border:1px solid var(--linea);border-radius:7px;font-size:14px;background:#fff}
+.seg{display:inline-flex;border:1px solid var(--linea);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{appearance:none;border:0;background:none;padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--suave);cursor:pointer}
+.seg button+button{border-left:1px solid var(--linea)}
+.seg button[aria-pressed="true"]{background:var(--inst);color:#fff}
+
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.t th{text-align:left;font-size:12px;font-weight:700;color:var(--suave);padding:7px 8px;border-bottom:2px solid var(--linea);white-space:nowrap}
+table.t td{padding:7px 8px;border-bottom:1px solid #EDF0F4;font-variant-numeric:tabular-nums}
+table.t td.n,table.t th.n{text-align:right}
+table.t tbody tr.clic{cursor:pointer}
+table.t tbody tr.clic:hover td{background:#F2F6FB}
+table.t tfoot td{font-weight:700;border-top:2px solid var(--linea);border-bottom:0}
+.tbl-scroll{overflow-x:auto}
+.pill{display:inline-block;color:#fff;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.cuad{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* Detalle (drill) */
+#drill{display:none}
+#drill.ver{display:block}
+.drill-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.btn{appearance:none;border:1px solid var(--inst);background:var(--inst);color:#fff;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:13.5px}
+.btn.sec{background:#fff;color:var(--inst)}
+
+/* Carga */
+#carga{position:fixed;inset:0;background:rgba(238,241,245,.96);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+.carga-box{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:22px 24px;width:min(420px,100%)}
+.carga-box h2{margin:0 0 6px;font-size:17px;color:var(--marino)}
+.barra{height:8px;background:#E3E8EF;border-radius:999px;overflow:hidden;margin:12px 0 8px}
+.barra i{display:block;height:100%;width:0;background:var(--inst);transition:width .25s}
+#cargaMsg{font-size:13.5px;color:var(--suave)}
+.archivo{margin-top:14px;display:none}
+.archivo.ver{display:block}
+.vacio{padding:24px;text-align:center;color:var(--suave);font-size:14px}
+footer{text-align:center;font-size:12.5px;color:var(--suave);padding:0 20px 24px}
+@media (max-width:600px){
+  .wrap{padding:12px 12px 32px}.top{padding:12px 12px 0}
+  .kpi-v{font-size:21px}.lienzo{height:300px}
+  .filtros-grid{grid-template-columns:1fr 1fr}
+  .kpis{grid-template-columns:1fr 1fr}.kpi{padding:10px 10px 10px 13px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="carga" role="status" aria-live="polite">
+  <div class="carga-box">
+    <h2>Cargando cartera</h2>
+    <div class="barra"><i id="cargaBar"></i></div>
+    <div id="cargaMsg">Descargando MUTUAL_2026.xlsx…</div>
+    <div class="archivo" id="cargaArchivo">
+      <p style="font-size:13.5px;margin:10px 0 8px">Elige el archivo desde tu equipo:</p>
+      <input type="file" id="fileXlsx" accept=".xlsx,.xls">
+    </div>
+  </div>
+</div>
+
+<header class="top">
+  <div class="top-in">
+    <div class="top-row">
+      <div class="marca">Arts Nova MutuClub<span>Cobranza de primas</span></div>
+      <div class="fecha-datos" id="fechaDatos">—</div>
+    </div>
+    <nav class="secciones" role="tablist" aria-label="Secciones">
+      <button role="tab" aria-selected="true" data-vista="resumen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Resumen ejecutivo</button>
+      <button role="tab" aria-selected="false" data-vista="flujo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>Flujo de cobranza</button>
+      <button role="tab" aria-selected="false" data-vista="antig">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>Antigüedad</button>
+      <button role="tab" aria-selected="false" data-vista="estatus">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Estado de pólizas</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- FILTROS -->
+  <div class="filtros" id="filtros">
+    <div class="filtros-cab">
+      <h2>Filtros <span class="activos" id="filtrosActivos"></span></h2>
+      <div>
+        <button class="btn-link" id="btnLimpiar">Quitar filtros</button>
+        <button class="btn-link" id="btnPlegar" aria-expanded="true" style="margin-left:12px">Ocultar</button>
+      </div>
+    </div>
+    <div class="filtros-grid">
+      <div><label for="fAnio">Año de inicio de póliza</label><select id="fAnio"></select></div>
+      <div><label for="fMes">Mes de inicio</label><select id="fMes"></select></div>
+      <div><label for="fAsesor">Ejecutivo (asesor)</label><select id="fAsesor"></select></div>
+      <div><label for="fCobrador">Gestor de cobranza</label><select id="fCobrador"></select></div>
+      <div><label for="fMuni">Región (municipio)</label><select id="fMuni"></select></div>
+      <div><label for="fCob">Tipo de seguro</label><select id="fCob"></select></div>
+      <div><label for="fTipo">Tipo de póliza</label><select id="fTipo"></select></div>
+      <div><label for="fEst">Estado de cobranza</label><select id="fEst"></select></div>
+      <div><label for="fCli">Cliente</label><input type="search" id="fCli" placeholder="Nombre o póliza" autocomplete="off"></div>
+    </div>
+  </div>
+
+  <!-- RESUMEN -->
+  <section class="vista activa" id="v-resumen" role="tabpanel">
+    <div class="sec-tit">
+      <h1>Resumen ejecutivo</h1>
+      <p>Las tarjetas usan los filtros de arriba. Pasa el cursor (o toca) el ícono ⓘ para ver cómo se calcula cada indicador.</p>
+    </div>
+    <div class="grupo"><h3>Cartera general</h3><div class="kpis" id="kpiCartera"></div></div>
+    <div class="grupo"><h3>Gestión de cobranza</h3><div class="kpis" id="kpiCobranza"></div></div>
+    <div class="grupo"><h3>Riesgo</h3><div class="kpis" id="kpiRiesgo"></div></div>
+    <div class="grupo"><h3>Tendencia</h3><div class="comparativos" id="comparativos"></div></div>
+  </section>
+
+  <!-- FLUJO -->
+  <section class="vista" id="v-flujo" role="tabpanel">
+    <div class="sec-tit">
+      <h1>Flujo de cobranza</h1>
+      <p>Lo que debía pagarse (enganches y mensualidades que vencieron en cada periodo), lo que entró y lo que de esas mensualidades sigue sin pagarse hoy.</p>
+    </div>
+    <div class="panel">
+      <div class="controles">
+        <div><label>Agrupar por</label>
+          <div class="seg" id="segAgrupa">
+            <button data-g="dia" aria-pressed="false">Diario</button>
+            <button data-g="semana" aria-pressed="false">Semanal</button>
+            <button data-g="mes" aria-pressed="true">Mensual</button>
+          </div></div>
+        <div><label for="flDesde">Desde</label><input type="date" id="flDesde"></div>
+        <div><label for="flHasta">Hasta</label><input type="date" id="flHasta"></div>
+      </div>
+      <div class="lienzo alto"><canvas id="chFlujo" aria-label="Gráfica de flujo de cobranza"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Detalle por periodo</h2>
+      <div class="tbl-scroll"><table class="t" id="tblFlujo"></table></div>
+    </div>
+  </section>
+
+  <!-- ANTIGÜEDAD -->
+  <section class="vista" id="v-antig" role="tabpanel">
+    <div class="sec-tit">
+      <h1>Cartera por antigüedad</h1>
+      <p>Cada póliza se ubica según los días desde su mensualidad vencida más antigua que sigue sin pagarse. Incluye las canceladas por falta de pago, que es donde está la deuda de más de 90 días. Da clic en una barra para ver las pólizas.</p>
+    </div>
+    <div class="dos-col">
+      <div class="panel"><div class="lienzo"><canvas id="chAntig" aria-label="Gráfica de antigüedad de saldos"></canvas></div></div>
+      <div class="panel"><div class="tbl-scroll"><table class="t" id="tblAntig"></table></div></div>
+    </div>
+  </section>
+
+  <!-- ESTATUS -->
+  <section class="vista" id="v-estatus" role="tabpanel">
+    <div class="sec-tit">
+      <h1>Estado de pólizas</h1>
+      <p>Clasificación con la misma regla de la app de Estados de Cuenta. Da clic en un estatus para ver sus pólizas.</p>
+    </div>
+    <div class="dos-col ancha-der">
+      <div class="panel"><div class="lienzo"><canvas id="chEstatus" aria-label="Gráfica de estado de pólizas"></canvas></div></div>
+      <div class="panel"><div class="tbl-scroll"><table class="t" id="tblEstatus"></table></div></div>
+    </div>
+  </section>
+
+  <!-- DETALLE (drill) -->
+  <div class="panel" id="drill" aria-live="polite">
+    <div class="drill-cab">
+      <div><h2 id="drillTit">Pólizas</h2><p class="sub" id="drillSub" style="margin:0"></p></div>
+      <div><button class="btn sec" id="drillCsv">Descargar CSV</button> <button class="btn" id="drillCerrar">Cerrar</button></div>
+    </div>
+    <div class="tbl-scroll" style="margin-top:10px"><table class="t" id="tblDrill"></table></div>
+  </div>
+
+</div>
+<footer id="pie">Arts Nova MutuClub · Dashboard de cobranza de primas · v2</footer>
+<div id="tip" role="tooltip"></div>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIGURACIÓN — ajusta aquí los umbrales de los semáforos
+══════════════════════════════════════════════════════════════ */
+const CONFIG={
+  DATA_URL:'MUTUAL_2026.xlsx',            // relativo al mismo repo de GitHub Pages
+  semaforo:{
+    efectividad:[95,85],    // % cobrado de lo exigible a hoy: ≥95 verde, ≥85 amarillo, menos rojo
+    vencidoPct:[10,20],     // % del saldo pendiente que ya está vencido: ≤10 verde, ≤20 amarillo
+    cobranzaMes:[100,90],   // cobranza del mes vs mismo día del mes anterior (%): ≥100 verde, ≥90 amarillo
+    diasCobranza:[5,15],    // días promedio de atraso al pagar: ≤5 verde, ≤15 amarillo
+    morosidad:[10,20],      // % de pólizas con saldo que están atrasadas o en problema
+    problemaPct:[5,10],     // % de pólizas con saldo que están en problema
+    criticaPct:[10,25],     // % de la deuda vencida con más de 90 días
+  },
+  ventanaRiesgo:90,         // días hacia atrás para medir qué tanto termina cancelándose cada estatus
+};
+const HOY=new Date();HOY.setHours(0,0,0,0);
+const DIA=864e5;
+
+/* Motor de cálculo: idéntico al de Estados de Cuenta */
+const ENGINE = (function(){
+  const nz=x=>{const v=parseFloat(x);return isNaN(v)?0:v;};
+  const norm=s=>(s==null?'':String(s)).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const fechaValida=d=>d instanceof Date&&!isNaN(d)&&d.getFullYear()>=2015&&d.getFullYear()<=2030;
+  function addMonths(date,n){const d=new Date(date.getTime());const day=d.getDate();d.setMonth(d.getMonth()+n);if(d.getDate()<day)d.setDate(0);return d;}
+  function mesesTranscurridos(inicio,hoy){if(!(inicio instanceof Date)||isNaN(inicio))return null;let m=(hoy.getFullYear()-inicio.getFullYear())*12+(hoy.getMonth()-inicio.getMonth());if(hoy.getDate()<inicio.getDate())m-=1;return Math.max(0,m);}
+  function parseFecha(v){
+    if(v instanceof Date)return v;
+    if(typeof v==='number'&&v>40000&&v<60000)return new Date(Math.round((v-25569)*86400*1000));
+    if(typeof v==='string'&&v.trim()){const d=new Date(v);if(!isNaN(d))return d;}
+    return null;
+  }
+  function fmtFecha(d){if(!fechaValida(d))return '—';const dd=String(d.getDate()).padStart(2,'0');const mm=String(d.getMonth()+1).padStart(2,'0');return `${dd}/${mm}/${d.getFullYear()}`;}
+  function fmtMoneda(n){return '$'+(Math.round(nz(n)*100)/100).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function calcular(poliza,pagosDePoliza,hoy){
+    hoy=hoy||new Date();
+    const costo=nz(poliza['Costo']),ini=nz(poliza['Pago Inicial']),cuota=nz(poliza['Pagos de']);
+    const inicio=parseFecha(poliza['Fecha Inicio Vigencia']);
+    const sumaPagos=pagosDePoliza.reduce((a,p)=>a+nz(p.monto),0);
+    const totalPagado=ini+sumaPagos, saldo=costo-totalPagado;
+    const nCont=cuota>0?Math.max(0,Math.ceil((costo-ini)/cuota)):0;
+    const mt=mesesTranscurridos(inicio,hoy);
+    let estatus,atrasoMeses=0;const cancela=String(poliza['Cancela']);
+    if(cancela==='-1'||cancela==='-1.0')estatus='Cancelada manualmente';
+    else if(saldo<=0)estatus='Pagada';
+    else if(mt===null)estatus='Sin vigencia';
+    else{const cv=Math.min(mt,nCont);const esp=Math.min(ini+cv*cuota,costo);const ad=esp-totalPagado;
+      atrasoMeses=(cuota>0&&ad>0)?Math.ceil(ad/cuota):0;
+      estatus=atrasoMeses<=0?'Vigente':atrasoMeses===1?'Atrasada':atrasoMeses===2?'Problema':'Cancelada por falta de pago';}
+    const calendario=[];let rest=sumaPagos;const montoMens=Math.max(0,costo-ini);
+    for(let i=1;i<=nCont;i++){const venc=fechaValida(inicio)?addMonths(inicio,i):null;
+      let monto=cuota;if(i===nCont)monto=montoMens-cuota*(nCont-1);monto=Math.round(monto*100)/100;
+      let estado;if(rest>=monto-0.005){estado='Pagada';rest-=monto;}else if(rest>0){estado='Parcial';rest=0;}else{estado=(venc&&venc<hoy)?'Vencida':'Pendiente';}
+      if(saldo<=0)estado='Pagada';calendario.push({n:i,vencimiento:venc,monto,estado});}
+    let proximoPago=null;if(saldo>0){const p=calendario.find(c=>c.estado!=='Pagada');proximoPago=p?p.vencimiento:null;}
+    const tablaPagos=[];if(ini>0)tablaPagos.push({fecha:inicio,recibo:'ENGANCHE',monto:ini,tipo:'Pago Inicial'});
+    const abonos=pagosDePoliza.slice().sort((a,b)=>{const av=fechaValida(a.fecha)?a.fecha.getTime():Infinity;const bv=fechaValida(b.fecha)?b.fecha.getTime():Infinity;return av-bv;});
+    abonos.forEach(p=>tablaPagos.push({fecha:p.fecha,recibo:p.recibo,monto:nz(p.monto),tipo:'Abono'}));
+    return{costo,pagoInicial:ini,cuota,totalPagado,saldo,nMensualidades:nCont,estatus,atrasoMeses,proximoPago,calendario,tablaPagos,vigenciaInicio:inicio,vigenciaFin:parseFecha(poliza['Fecha Termino Vigencia'])};
+  }
+  const COLORES={'Pagada':'#0E7C66','Vigente':'#2563EB','Atrasada':'#D97706','Problema':'#EA580C','Cancelada por falta de pago':'#DC2626','Cancelada manualmente':'#6B7280','Sin vigencia':'#6B7280'};
+  return{nz,norm,fechaValida,addMonths,fmtFecha,fmtMoneda,calcular,COLORES};
+})();
+
+/* ══════════════════ UTILIDADES ══════════════════ */
+const $=id=>document.getElementById(id);
+const fmtM=n=>'$'+Math.round(n||0).toLocaleString('es-MX');
+const fmtN=n=>Math.round(n||0).toLocaleString('es-MX');
+const fmtP=n=>(isFinite(n)?n:0).toLocaleString('es-MX',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const fmtF=d=>ENGINE.fmtFecha(d);
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const sinHora=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x;};
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MES_C=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const ORDEN_EST=['Pagada','Vigente','Atrasada','Problema','Cancelada por falta de pago','Cancelada manualmente','Sin vigencia'];
+const CON_SALDO=new Set(['Vigente','Atrasada','Problema']);
+const CANCEL=new Set(['Cancelada por falta de pago','Cancelada manualmente']);
+function semMayor(v,[g,y]){return v>=g?'verde':v>=y?'amarillo':'rojo';}
+function semMenor(v,[g,y]){return v<=g?'verde':v<=y?'amarillo':'rojo';}
+function lbar(p,m){$('cargaBar').style.width=p+'%';if(m)$('cargaMsg').textContent=m;}
+const pausa=()=>new Promise(r=>setTimeout(r,0));
+
+/* ══════════════════ ESTADO ══════════════════ */
+let POL=[];          // pólizas analizadas
+let MOVS=[];         // dinero recibido: {pol, fecha, monto, enganche}
+let PROB={};         // probabilidad histórica de terminar cancelada, por estatus
+let ULTIMO_PAGO=null;
+let F=[];            // pólizas que pasan los filtros
+let VISTA='resumen';
+const charts={};
+
+/* ══════════════════ CARGA ══════════════════ */
+async function cargar(){
+  try{
+    lbar(8,'Descargando MUTUAL_2026.xlsx…');
+    const res=await fetch(CONFIG.DATA_URL+'?v='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    await procesarLibro(await res.arrayBuffer());
+  }catch(e){
+    lbar(0,'No se pudo descargar el archivo automáticamente ('+e.message+').');
+    $('cargaArchivo').classList.add('ver');
+  }
+}
+$('fileXlsx').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  $('cargaArchivo').classList.remove('ver');
+  const r=new FileReader();r.onload=ev=>procesarLibro(ev.target.result);r.readAsArrayBuffer(f);
+});
+
+function parseFechaPago(v){
+  if(v instanceof Date)return v;
+  if(typeof v==='number'&&v>40000&&v<60000)return new Date(Math.round((v-25569)*864e5));
+  if(typeof v==='string'&&v.trim()){const d=new Date(v);if(!isNaN(d))return d;}
+  return null;
+}
+
+async function procesarLibro(buf){
+  lbar(25,'Leyendo hojas…');await pausa();
+  const wb=XLSX.read(buf,{type:'array',cellDates:true});
+  if(!wb.Sheets['Bd Clientes']){lbar(0,'El archivo no tiene la hoja «Bd Clientes».');$('cargaArchivo').classList.add('ver');return;}
+  const clientes=XLSX.utils.sheet_to_json(wb.Sheets['Bd Clientes'],{defval:null});
+
+  // Pagos: Bd Pagos + Pagos Historicos, sin duplicados (misma regla que Estados de Cuenta)
+  lbar(45,'Combinando pagos…');await pausa();
+  const idx={},seen=new Set();
+  ['Bd Pagos','Pagos Historicos'].forEach(h=>{
+    if(!wb.Sheets[h])return;
+    XLSX.utils.sheet_to_json(wb.Sheets[h],{defval:null}).forEach(p=>{
+      const id=String(p['IdPoliza']);
+      const rec=String(p['Número de Recibo']||'').trim().replace(/^0+/,'');
+      const fec=p['Fecha Pago'] instanceof Date?p['Fecha Pago'].toISOString().slice(0,10):String(p['Fecha Pago']||'').trim();
+      const key=id+'|'+((rec&&rec!=='0')?'r:'+rec:'f:'+fec);
+      if(seen.has(key))return;seen.add(key);
+      (idx[id]=idx[id]||[]).push({fecha:parseFechaPago(p['Fecha Pago']),recibo:p['Número de Recibo'],monto:ENGINE.nz(p['Monto de Pago'])});
+    });
+  });
+
+  lbar(60,'Calculando estatus y antigüedad…');await pausa();
+  const T90=new Date(HOY.getTime()-CONFIG.ventanaRiesgo*DIA);
+  const T30=new Date(HOY.getTime()-30*DIA);
+  const tally={};
+  POL=[];MOVS=[];ULTIMO_PAGO=null;
+  clientes.forEach((p,i)=>{
+    const pagos=idx[String(p['IdPoliza'])]||[];
+    const o=analizar(p,pagos);
+    // Estatus hace 30 días (para comparar morosidad)
+    const p30=pagos.filter(x=>x.fecha&&x.fecha<=T30);
+    o.est30=(o.ini&&o.ini<=T30)?ENGINE.calcular(p,p30,T30).estatus:null;
+    // Respaldo histórico del riesgo: estatus hace N días → ¿hoy está cancelada por falta de pago?
+    if(o.ini&&o.ini<=T90&&o.est!=='Cancelada manualmente'){
+      const e=ENGINE.calcular(p,pagos.filter(x=>x.fecha&&x.fecha<=T90),T90).estatus;
+      if(CON_SALDO.has(e)){const t=tally[e]=tally[e]||{n:0,k:0};t.n++;if(o.est==='Cancelada por falta de pago')t.k++;}
+    }
+    POL.push(o);
+    if(o.pagoIni>0&&o.ini)MOVS.push({pol:o,fecha:sinHora(o.ini),monto:o.pagoIni,enganche:true});
+    pagos.forEach(x=>{if(x.fecha&&x.monto){const f=sinHora(x.fecha);MOVS.push({pol:o,fecha:f,monto:x.monto,enganche:false});if(f<=HOY&&(!ULTIMO_PAGO||f>ULTIMO_PAGO))ULTIMO_PAGO=f;}});
+  });
+  PROB={};
+  ['Vigente','Atrasada','Problema'].forEach(e=>{const t=tally[e]||{n:0,k:0};PROB[e]={n:t.n,k:t.k,p:t.n?t.k/t.n:0};});
+
+  lbar(85,'Armando filtros…');await pausa();
+  armarFiltros();
+  $('fechaDatos').textContent=`Hoy ${fmtF(HOY)} · Último pago registrado ${ULTIMO_PAGO?fmtF(ULTIMO_PAGO):'—'} · ${fmtN(POL.length)} pólizas`;
+  lbar(100,'Listo');
+  aplicarFiltros();
+  setTimeout(()=>{$('carga').style.display='none';},250);
+}
+
+/* Análisis de una póliza: estatus + reparto de abonos a mensualidades (primero la más antigua) */
+function analizar(p,pagos){
+  const r=ENGINE.calcular(p,pagos,HOY);
+  const ini=ENGINE.fechaValida(r.vigenciaInicio)?sinHora(r.vigenciaInicio):null;
+  const fin=ENGINE.fechaValida(r.vigenciaFin)?sinHora(r.vigenciaFin):null;
+  const abonos=pagos.filter(x=>x.monto>0).slice().sort((a,b)=>{
+    const av=a.fecha?a.fecha.getTime():Infinity,bv=b.fecha?b.fecha.getTime():Infinity;return av-bv;});
+  let ai=0,resto=abonos.length?abonos[0].monto:0;
+  const cuotas=r.calendario.map(c=>{
+    let falta=c.monto,pagadaEl=null;
+    while(falta>0.005&&ai<abonos.length){
+      const usa=Math.min(falta,resto);falta-=usa;resto-=usa;
+      if(falta<=0.005)pagadaEl=abonos[ai].fecha;
+      if(resto<=0.005){ai++;resto=ai<abonos.length?abonos[ai].monto:0;}
+    }
+    if(r.saldo<=0){falta=0;}
+    return{venc:c.vencimiento?sinHora(c.vencimiento):null,monto:c.monto,falta:Math.max(0,falta),pagadaEl:pagadaEl?sinHora(pagadaEl):null};
+  });
+  // En canceladas por falta de pago, las mensualidades posteriores a la cancelación ya no se exigen
+  if(r.estatus==='Cancelada por falta de pago'){
+    let sinPagar=0;
+    cuotas.forEach(c=>{if(sinPagar>=3){c.fuera=true;return;}if(c.venc&&c.venc<=HOY&&c.falta>0.005)sinPagar++;});
+  }
+  const manual=r.estatus==='Cancelada manualmente';
+  let vencido=0,porVencer15=0,antig=null,exigible=r.pagoInicial;
+  const lim15=new Date(HOY.getTime()+15*DIA);
+  cuotas.forEach(c=>{
+    if(c.fuera||!c.venc||manual)return;
+    if(c.venc<=HOY){
+      exigible+=c.monto;
+      if(c.falta>0.005){vencido+=c.falta;if(antig===null)antig=Math.round((HOY-c.venc)/DIA);}
+    }else if(c.venc<=lim15&&c.falta>0.005)porVencer15+=c.falta;
+  });
+  return{
+    id:String(p['IdPoliza']),nombre:String(p['Nombre']||'').trim(),tel:p['Telefono 01']||'',
+    asesor:String(p['Asesor']||'').trim(),cobrador:String(p['Cobrador']||'').trim(),
+    muni:String(p['Municipio']||'').trim(),cobertura:String(p['Tipo Cobertura']||'').trim(),
+    tipo:String(p['Tipo de Póliza']||'').trim(),
+    ini,fin,costo:r.costo,pagoIni:r.pagoInicial,cuota:r.cuota,pagado:r.totalPagado,saldo:Math.max(0,r.saldo),
+    est:r.estatus,cuotas,vencido,porVencer15,antig,exigible:Math.min(exigible,r.costo),
+    clave:ENGINE.norm(p['Nombre'])+' '+String(p['IdPoliza']),
+  };
+}
+
+/* ══════════════════ FILTROS ══════════════════ */
+const FIL=['fAnio','fMes','fAsesor','fCobrador','fMuni','fCob','fTipo','fEst'];
+function opciones(id,vals,todos){
+  $(id).innerHTML=`<option value="">${todos}</option>`+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+}
+function unicos(campo){return[...new Set(POL.map(o=>o[campo]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));}
+function armarFiltros(){
+  const anios=[...new Set(POL.filter(o=>o.ini).map(o=>o.ini.getFullYear()))].sort((a,b)=>b-a);
+  opciones('fAnio',anios.map(String),'Todos los años');
+  $('fAnio').value=anios.includes(HOY.getFullYear())?String(HOY.getFullYear()):'';
+  $('fMes').innerHTML='<option value="">Todos los meses</option>'+MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  opciones('fAsesor',unicos('asesor'),'Todos');
+  opciones('fCobrador',unicos('cobrador'),'Todos');
+  opciones('fMuni',unicos('muni'),'Todas');
+  opciones('fCob',unicos('cobertura'),'Todos');
+  opciones('fTipo',unicos('tipo'),'Todos');
+  const ests=ORDEN_EST.filter(e=>POL.some(o=>o.est===e));
+  opciones('fEst',ests,'Todos');
+}
+function filtrar(ignorarFecha){
+  const v=Object.fromEntries(FIL.map(id=>[id,$(id).value]));
+  const q=ENGINE.norm($('fCli').value);
+  return POL.filter(o=>{
+    if(!ignorarFecha){
+      if(v.fAnio&&(!o.ini||o.ini.getFullYear()!==+v.fAnio))return false;
+      if(v.fMes!==''&&(!o.ini||o.ini.getMonth()!==+v.fMes))return false;
+    }
+    if(v.fAsesor&&o.asesor!==v.fAsesor)return false;
+    if(v.fCobrador&&o.cobrador!==v.fCobrador)return false;
+    if(v.fMuni&&o.muni!==v.fMuni)return false;
+    if(v.fCob&&o.cobertura!==v.fCob)return false;
+    if(v.fTipo&&o.tipo!==v.fTipo)return false;
+    if(v.fEst&&o.est!==v.fEst)return false;
+    if(q&&!o.clave.includes(q))return false;
+    return true;
+  });
+}
+function aplicarFiltros(){
+  F=filtrar(false);
+  const n=FIL.filter(id=>$(id).value!=='').length+($('fCli').value.trim()?1:0);
+  $('filtrosActivos').textContent=n?`· ${n} activo(s) · ${fmtN(F.length)} pólizas`:`· ${fmtN(F.length)} pólizas`;
+  cerrarDrill();
+  pintar();
+}
+FIL.forEach(id=>$(id).addEventListener('change',aplicarFiltros));
+let tCli;$('fCli').addEventListener('input',()=>{clearTimeout(tCli);tCli=setTimeout(aplicarFiltros,250);});
+$('btnLimpiar').addEventListener('click',()=>{FIL.forEach(id=>$(id).value='');$('fCli').value='';aplicarFiltros();});
+$('btnPlegar').addEventListener('click',e=>{
+  const c=$('filtros').classList.toggle('cerrado');
+  e.target.textContent=c?'Mostrar':'Ocultar';e.target.setAttribute('aria-expanded',String(!c));
+});
+
+/* ══════════════════ NAVEGACIÓN ══════════════════ */
+document.querySelectorAll('nav.secciones button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav.secciones button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
+  VISTA=b.dataset.vista;
+  document.querySelectorAll('section.vista').forEach(s=>s.classList.toggle('activa',s.id==='v-'+VISTA));
+  cerrarDrill();pintar();
+}));
+function pintar(){
+  if(!POL.length)return;
+  ({resumen:pintarResumen,flujo:pintarFlujo,antig:pintarAntig,estatus:pintarEstatus})[VISTA]();
+}
+
+/* ══════════════════ TOOLTIP ENRIQUECIDO ══════════════════ */
+const tip=$('tip');
+function mostrarTip(el){
+  tip.innerHTML=el.dataset.tip;tip.classList.add('ver');
+  const r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+  let x=Math.min(window.innerWidth-w-8,Math.max(8,r.left+r.width/2-w/2));
+  let y=r.top-h-8;if(y<8)y=r.bottom+8;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+document.addEventListener('mouseover',e=>{const el=e.target.closest('[data-tip]');if(el)mostrarTip(el);});
+document.addEventListener('mouseout',e=>{if(e.target.closest('[data-tip]'))tip.classList.remove('ver');});
+document.addEventListener('focusin',e=>{const el=e.target.closest('[data-tip]');if(el)mostrarTip(el);});
+document.addEventListener('focusout',()=>tip.classList.remove('ver'));
+document.addEventListener('click',e=>{const el=e.target.closest('[data-tip]');if(el){mostrarTip(el);}else tip.classList.remove('ver');});
+window.addEventListener('scroll',()=>tip.classList.remove('ver'),{passive:true});
+
+function kpi({l,v,s='',sem='',tipTxt=''}){
+  return`<div class="kpi ${sem?'s-'+sem:''}">
+    <div class="kpi-l">${sem?`<span class="sem ${sem}" aria-label="Semáforo ${sem}"></span>`:''}${l}
+      ${tipTxt?`<button class="info" data-tip="${esc(tipTxt)}" aria-label="Cómo se calcula">i</button>`:''}</div>
+    <div class="kpi-v">${v}</div>${s?`<div class="kpi-s">${s}</div>`:''}</div>`;
+}
+function tend(act,ant){
+  if(!ant)return act?'<span class="tend sube">nuevo</span>':'<span class="tend igual">sin cambio</span>';
+  const d=(act-ant)/ant*100;
+  const cls=Math.abs(d)<0.5?'igual':d>0?'sube':'baja';
+  return`<span class="tend ${cls}">${d>0?'▲':d<0?'▼':'■'} ${fmtP(Math.abs(d))}</span>`;
+}
+
+/* ══════════════════ GRÁFICAS: utilidades ══════════════════ */
+Chart.defaults.font.family="'Source Sans 3',system-ui,sans-serif";
+Chart.defaults.font.size=13;
+Chart.defaults.color='#5E6B7D';
+const ejeM=v=>{const a=Math.abs(v);return'$'+(a>=1e6?(v/1e6).toFixed(1)+' M':a>=1e3?Math.round(v/1e3)+' mil':v);};
+function grafica(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);return charts[id];}
+const COL_EST={'Pagada':'#28A745','Vigente':'#005A9C','Atrasada':'#FFC107','Problema':'#F08C00',
+  'Cancelada por falta de pago':'#DC3545','Cancelada manualmente':'#8A94A3','Sin vigencia':'#C5CCD6'};
+const pill=e=>`<span class="pill" style="background:${COL_EST[e]||'#8A94A3'};${e==='Atrasada'?'color:#3D2E00':''}">${esc(e)}</span>`;
+
+/* ══════════════════ 1. RESUMEN EJECUTIVO ══════════════════ */
+function sumaMovs(set,desde,hasta){
+  let t=0,n=0;
+  for(const m of MOVS){if(m.fecha>=desde&&m.fecha<=hasta&&set.has(m.pol)){t+=m.monto;n++;}}
+  return{t,n};
+}
+function mismoDiaMesAnterior(d){
+  const x=new Date(d.getFullYear(),d.getMonth()-1,1);
+  const ult=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();
+  x.setDate(Math.min(d.getDate(),ult));return x;
+}
+function pintarResumen(){
+  const act=F.filter(o=>!CANCEL.has(o.est));
+  const sum=(arr,k)=>arr.reduce((a,o)=>a+o[k],0);
+  const emitida=sum(act,'costo'),cobrada=sum(act,'pagado'),pendiente=sum(act,'saldo');
+  const vencido=sum(act,'vencido'),exigible=sum(act,'exigible');
+  const porVencer=Math.max(0,pendiente-vencido);
+  const recup=emitida?cobrada/emitida*100:0;
+  const efect=exigible?(1-vencido/exigible)*100:100;
+  const vencPct=pendiente?vencido/pendiente*100:0;
+
+  $('kpiCartera').innerHTML=[
+    kpi({l:'Prima total emitida',v:fmtM(emitida),s:`${fmtN(act.length)} pólizas no canceladas`,
+      tipTxt:'Suma del <b>costo</b> de las pólizas que pasan los filtros, sin contar las canceladas.'}),
+    kpi({l:'Prima total cobrada',v:fmtM(cobrada),s:'Enganches + abonos',
+      tipTxt:'Pago inicial más todos los abonos registrados (Bd Pagos + Pagos Historicos) de esas pólizas.'}),
+    kpi({l:'Prima pendiente de cobro',v:fmtM(pendiente),s:'Costo − cobrado',
+      tipTxt:'Lo que falta por cobrar de las pólizas no canceladas, incluyendo mensualidades que aún no vencen.'}),
+    kpi({l:'% de recuperación',v:fmtP(recup),s:`Efectividad a la fecha: <b>${fmtP(efect)}</b>`,sem:semMayor(efect,CONFIG.semaforo.efectividad),
+      tipTxt:`<b>Recuperación</b> = cobrado ÷ emitido.<br><b>Efectividad a la fecha</b> = qué parte de lo que ya debía estar pagado hoy (enganche + mensualidades vencidas) sí se pagó. El semáforo usa la efectividad: verde ≥ ${CONFIG.semaforo.efectividad[0]}%, amarillo ≥ ${CONFIG.semaforo.efectividad[1]}%.`}),
+    kpi({l:'Saldo vencido',v:fmtM(vencido),s:`${fmtP(vencPct)} del pendiente`,sem:semMenor(vencPct,CONFIG.semaforo.vencidoPct),
+      tipTxt:`Mensualidades cuya fecha ya pasó y no están cubiertas. Semáforo: verde ≤ ${CONFIG.semaforo.vencidoPct[0]}% del saldo pendiente, amarillo ≤ ${CONFIG.semaforo.vencidoPct[1]}%.`}),
+    kpi({l:'Saldo por vencer',v:fmtM(porVencer),s:'Mensualidades futuras',
+      tipTxt:'Saldo pendiente cuyas mensualidades todavía no llegan a su fecha.'}),
+  ].join('');
+
+  // Cobranza
+  const set=new Set(F);
+  const iniMes=new Date(HOY.getFullYear(),HOY.getMonth(),1);
+  const iniMesAnt=new Date(HOY.getFullYear(),HOY.getMonth()-1,1);
+  const hoy=sumaMovs(set,HOY,HOY);
+  const mes=sumaMovs(set,iniMes,HOY);
+  const mesAnt=sumaMovs(set,iniMesAnt,mismoDiaMesAnterior(HOY));
+  const ratioMes=mesAnt.t?mes.t/mesAnt.t*100:(mes.t?100:0);
+  const desde90=new Date(HOY.getTime()-90*DIA);
+  let sd=0,nd=0,aTiempo=0;
+  F.forEach(o=>o.cuotas.forEach(c=>{
+    if(c.pagadaEl&&c.venc&&c.pagadaEl>=desde90&&c.pagadaEl<=HOY){
+      const d=Math.max(0,Math.round((c.pagadaEl-c.venc)/DIA));sd+=d;nd++;if(d===0)aTiempo++;}
+  }));
+  const diasProm=nd?sd/nd:0;
+  $('kpiCobranza').innerHTML=[
+    kpi({l:'Cobranza realizada hoy',v:fmtM(hoy.t),s:`${fmtN(hoy.n)} pago(s) · ${fmtF(HOY)}`,
+      tipTxt:'Pagos con fecha de hoy. Depende de que el Excel ya esté actualizado con los pagos del día.'}),
+    kpi({l:'Cobranza del mes',v:fmtM(mes.t),s:`${tend(mes.t,mesAnt.t)} vs mismo día de ${MESES[iniMesAnt.getMonth()].toLowerCase()}`,
+      sem:semMayor(ratioMes,CONFIG.semaforo.cobranzaMes),
+      tipTxt:`Del 1 de ${MESES[HOY.getMonth()].toLowerCase()} a hoy, comparado con el mismo número de días del mes anterior (${fmtM(mesAnt.t)}). Semáforo: verde si iguala o supera al mes anterior, amarillo si llega al ${CONFIG.semaforo.cobranzaMes[1]}%.`}),
+    kpi({l:'Promedio de días de cobranza',v:nd?diasProm.toLocaleString('es-MX',{maximumFractionDigits:1})+' días':'—',
+      s:nd?`${fmtP(aTiempo/nd*100)} pagadas a tiempo`:'Sin pagos en 90 días',sem:nd?semMenor(diasProm,CONFIG.semaforo.diasCobranza):'',
+      tipTxt:`Días entre el vencimiento de cada mensualidad y el día en que quedó cubierta, para las mensualidades pagadas en los últimos 90 días (${fmtN(nd)}). Un pago adelantado cuenta como 0 días.`}),
+  ].join('');
+
+  // Riesgo
+  const conSaldo=F.filter(o=>CON_SALDO.has(o.est));
+  const prob=F.filter(o=>o.est==='Problema');
+  const morosos=new Set(F.filter(o=>o.est==='Atrasada'||o.est==='Problema').map(o=>ENGINE.norm(o.nombre)));
+  const nMor=F.filter(o=>o.est==='Atrasada'||o.est==='Problema').length;
+  const conDeuda=F.filter(o=>o.est!=='Cancelada manualmente'&&o.vencido>0);
+  const critica=conDeuda.filter(o=>o.antig>90);
+  const deudaTot=sum(conDeuda,'vencido'),deudaCrit=sum(critica,'vencido');
+  const critPct=deudaTot?deudaCrit/deudaTot*100:0;
+  const riesgo=conSaldo.reduce((a,o)=>a+o.saldo*(PROB[o.est]?.p||0),0);
+  const nMin=Math.min(...['Vigente','Atrasada','Problema'].map(e=>PROB[e]?.n||0));
+  const confianza=nMin>=200?'alta':nMin>=50?'media':'baja';
+  const morosidad=conSaldo.length?nMor/conSaldo.length*100:0;
+  const probPct=conSaldo.length?prob.length/conSaldo.length*100:0;
+  const tablaProb=['Vigente','Atrasada','Problema'].map(e=>`${e}: <b>${fmtP((PROB[e]?.p||0)*100)}</b> (${fmtN(PROB[e]?.n||0)} casos)`).join('<br>');
+  $('kpiRiesgo').innerHTML=[
+    kpi({l:'Pólizas próximas a cancelación',v:fmtN(prob.length),s:`En problema · ${fmtM(sum(prob,'vencido'))} vencido`,sem:semMenor(probPct,CONFIG.semaforo.problemaPct),
+      tipTxt:'Pólizas con dos mensualidades atrasadas: una más y pasan a «Cancelada por falta de pago».'}),
+    kpi({l:'Clientes morosos',v:fmtN(morosos.size),s:`${fmtN(nMor)} pólizas atrasadas o en problema`,
+      tipTxt:'Clientes distintos con al menos una póliza atrasada o en problema.'}),
+    kpi({l:'Cartera crítica (+90 días)',v:fmtM(deudaCrit),s:`${fmtN(critica.length)} pólizas · ${fmtP(critPct)} de lo vencido`,sem:semMenor(critPct,CONFIG.semaforo.criticaPct),
+      tipTxt:'Deuda vencida de pólizas cuya mensualidad más antigua sin pagar tiene más de 90 días. Incluye canceladas por falta de pago.'}),
+    kpi({l:'Riesgo financiero estimado',v:fmtM(riesgo),s:`Confianza ${confianza}`,
+      tipTxt:`Saldo pendiente de cada póliza × probabilidad de que termine cancelada por falta de pago según su estatus. La probabilidad sale de tu propio historial: de las pólizas que hace ${CONFIG.ventanaRiesgo} días tenían ese estatus, cuántas hoy están canceladas.<br>${tablaProb}`}),
+    kpi({l:'Tasa de morosidad',v:fmtP(morosidad),s:'Atrasadas + problema ÷ pólizas con saldo',sem:semMenor(morosidad,CONFIG.semaforo.morosidad),
+      tipTxt:`Porcentaje de las pólizas vigentes, atrasadas o en problema que están atrasadas o en problema. Semáforo: verde ≤ ${CONFIG.semaforo.morosidad[0]}%, amarillo ≤ ${CONFIG.semaforo.morosidad[1]}%.`}),
+  ].join('');
+
+  // Comparativos
+  const setTodos=new Set(filtrar(true));
+  const iniAnio=new Date(HOY.getFullYear(),0,1),iniAnioAnt=new Date(HOY.getFullYear()-1,0,1);
+  const hoyAnt=new Date(HOY.getFullYear()-1,HOY.getMonth(),Math.min(HOY.getDate(),new Date(HOY.getFullYear()-1,HOY.getMonth()+1,0).getDate()));
+  const ytd=sumaMovs(setTodos,iniAnio,HOY),ytdAnt=sumaMovs(setTodos,iniAnioAnt,hoyAnt);
+  const base30=F.filter(o=>o.est30&&CON_SALDO.has(o.est30));
+  const mor30=base30.length?base30.filter(o=>o.est30==='Atrasada'||o.est30==='Problema').length/base30.length*100:0;
+  const dPts=morosidad-mor30;
+  $('comparativos').innerHTML=`
+    <div class="comp"><div class="comp-t">Cobranza: mes actual vs mes anterior</div>
+      <div class="comp-n"><b>${fmtM(mes.t)}</b>${tend(mes.t,mesAnt.t)}</div>
+      <div class="comp-d">1–${HOY.getDate()} ${MES_C[HOY.getMonth()]} vs 1–${mismoDiaMesAnterior(HOY).getDate()} ${MES_C[iniMesAnt.getMonth()]}: ${fmtM(mesAnt.t)}</div></div>
+    <div class="comp"><div class="comp-t">Cobranza: año actual vs año anterior</div>
+      <div class="comp-n"><b>${fmtM(ytd.t)}</b>${tend(ytd.t,ytdAnt.t)}</div>
+      <div class="comp-d">Al ${HOY.getDate()} ${MES_C[HOY.getMonth()]} ${HOY.getFullYear()-1}: ${fmtM(ytdAnt.t)}. Toma pólizas de todos los años (el filtro de año no aplica aquí).</div></div>
+    <div class="comp"><div class="comp-t">Tasa de morosidad: hoy vs hace 30 días</div>
+      <div class="comp-n"><b>${fmtP(morosidad)}</b><span class="tend ${Math.abs(dPts)<0.1?'igual':dPts>0?'baja':'sube'}">${dPts>0?'▲':dPts<0?'▼':'■'} ${Math.abs(dPts).toLocaleString('es-MX',{maximumFractionDigits:1})} pts</span></div>
+      <div class="comp-d">Hace 30 días: ${fmtP(mor30)}. Que baje es bueno.</div></div>`;
+}
+
+/* ══════════════════ 2. FLUJO DE COBRANZA ══════════════════ */
+let AGRUPA='mes';
+function rangoDefault(g){
+  const h=new Date(HOY);
+  if(g==='dia')return[new Date(HOY.getTime()-29*DIA),h];
+  if(g==='semana'){const d=lunes(HOY);return[new Date(d.getTime()-11*7*DIA),h];}
+  return[new Date(HOY.getFullYear(),HOY.getMonth()-11,1),h];
+}
+function lunes(d){const x=sinHora(d);const k=(x.getDay()+6)%7;return new Date(x.getTime()-k*DIA);}
+function claveB(d,g){if(g==='dia')return iso(d);if(g==='semana')return iso(lunes(d));return iso(d).slice(0,7);}
+function etiquetaB(k,g){
+  const[y,m,d]=k.split('-').map(Number);
+  if(g==='mes')return`${MES_C[m-1]} ${y}`;
+  if(g==='semana')return`sem. ${d} ${MES_C[m-1]}`;
+  return`${d} ${MES_C[m-1]}`;
+}
+function fijarRango(g){const[a,b]=rangoDefault(g);$('flDesde').value=iso(a);$('flHasta').value=iso(b);}
+document.querySelectorAll('#segAgrupa button').forEach(b=>b.addEventListener('click',()=>{
+  AGRUPA=b.dataset.g;
+  document.querySelectorAll('#segAgrupa button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  fijarRango(AGRUPA);pintarFlujo();
+}));
+['flDesde','flHasta'].forEach(id=>$(id).addEventListener('change',pintarFlujo));
+
+function pintarFlujo(){
+  if(!$('flDesde').value)fijarRango(AGRUPA);
+  let desde=sinHora(new Date($('flDesde').value+'T00:00:00')),hasta=sinHora(new Date($('flHasta').value+'T00:00:00'));
+  if(isNaN(desde)||isNaN(hasta)||desde>hasta){fijarRango(AGRUPA);return pintarFlujo();}
+  const g=AGRUPA;
+  // Lista ordenada de periodos
+  const claves=[];const vistos=new Set();
+  for(let d=new Date(desde);d<=hasta;d=new Date(d.getTime()+DIA)){const k=claveB(d,g);if(!vistos.has(k)){vistos.add(k);claves.push(k);}}
+  if(claves.length>400){$('tblFlujo').innerHTML='<tr><td class="vacio">El rango es muy amplio para agrupar por día. Elige semanal o mensual.</td></tr>';return;}
+  const B=Object.fromEntries(claves.map(k=>[k,{fac:0,cob:0,ven:0}]));
+  const enR=d=>d&&d>=desde&&d<=hasta;
+  F.forEach(o=>{
+    if(o.est==='Cancelada manualmente')return;
+    if(o.pagoIni>0&&enR(o.ini))B[claveB(o.ini,g)].fac+=o.pagoIni;
+    o.cuotas.forEach(c=>{
+      if(c.fuera||!enR(c.venc))return;
+      const b=B[claveB(c.venc,g)];b.fac+=c.monto;
+      if(c.venc<=HOY)b.ven+=c.falta;
+    });
+  });
+  const set=new Set(F);
+  MOVS.forEach(m=>{if(enR(m.fecha)&&set.has(m.pol))B[claveB(m.fecha,g)].cob+=m.monto;});
+  const L=claves.map(k=>etiquetaB(k,g)),fac=claves.map(k=>B[k].fac),cob=claves.map(k=>B[k].cob),ven=claves.map(k=>B[k].ven);
+  grafica('chFlujo',{type:'line',
+    data:{labels:L,datasets:[
+      {label:'Prima facturada (debía pagarse)',data:fac,borderColor:'#005A9C',backgroundColor:'#005A9C',cubicInterpolationMode:'monotone',pointRadius:g==='dia'?2:3,borderWidth:2.5},
+      {label:'Prima cobrada',data:cob,borderColor:'#28A745',backgroundColor:'#28A745',cubicInterpolationMode:'monotone',pointRadius:g==='dia'?2:3,borderWidth:2.5},
+      {label:'Prima vencida (sigue sin pagarse)',data:ven,borderColor:'#DC3545',backgroundColor:'#DC3545',cubicInterpolationMode:'monotone',pointRadius:g==='dia'?2:3,borderWidth:2,borderDash:[5,4]},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,boxHeight:8,padding:16}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtM(c.parsed.y)}`,
+          footer:it=>{const f=it[0]&&fac[it[0].dataIndex],c=it[0]&&cob[it[0].dataIndex];return f?`Cobrado vs facturado: ${fmtP(c/f*100)}`:'';}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:ejeM},grid:{color:'#EDF0F4'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true}}}}});
+  const filas=claves.map((k,i)=>({k,l:L[i],...B[k]})).reverse();
+  const T=filas.reduce((a,f)=>({fac:a.fac+f.fac,cob:a.cob+f.cob,ven:a.ven+f.ven}),{fac:0,cob:0,ven:0});
+  $('tblFlujo').innerHTML=`<thead><tr><th>Periodo</th><th class="n">Facturada</th><th class="n">Cobrada</th><th class="n">Cobrado vs facturado</th><th class="n">Vencida sin pagar</th></tr></thead>
+    <tbody>${filas.map(f=>`<tr><td>${f.l}${f.k===claveB(HOY,g)?' <span style="color:var(--suave);font-size:12px">(en curso)</span>':''}</td><td class="n">${fmtM(f.fac)}</td><td class="n">${fmtM(f.cob)}</td>
+      <td class="n">${f.fac?fmtP(f.cob/f.fac*100):'—'}</td><td class="n" style="color:${f.ven>0?'#B02A37':'inherit'}">${fmtM(f.ven)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="n">${fmtM(T.fac)}</td><td class="n">${fmtM(T.cob)}</td><td class="n">${T.fac?fmtP(T.cob/T.fac*100):'—'}</td><td class="n">${fmtM(T.ven)}</td></tr></tfoot>`;
+}
+
+/* ══════════════════ 3. ANTIGÜEDAD ══════════════════ */
+const BANDAS=[
+  {k:'pv',l:'Por vencer (15 días)',d:'Por vencer',c:'#005A9C'},
+  {k:'b1',l:'1–30 días',d:'Vencimiento reciente',c:'#FFC107',min:1,max:30},
+  {k:'b2',l:'31–60 días',d:'Cobranza prioritaria',c:'#F08C00',min:31,max:60},
+  {k:'b3',l:'61–90 días',d:'Riesgo alto',c:'#E8590C',min:61,max:90},
+  {k:'b4',l:'+90 días',d:'Riesgo crítico',c:'#DC3545',min:91,max:Infinity},
+];
+function polizasBanda(b){
+  const base=F.filter(o=>o.est!=='Cancelada manualmente');
+  if(b.k==='pv')return base.filter(o=>o.porVencer15>0&&o.est!=='Cancelada por falta de pago').map(o=>({o,monto:o.porVencer15}));
+  return base.filter(o=>o.vencido>0&&o.antig!==null&&(o.antig>=b.min||(b.min===1&&o.antig===0))&&o.antig<=b.max).map(o=>({o,monto:o.vencido}));
+}
+function pintarAntig(){
+  const datos=BANDAS.map(b=>{const l=polizasBanda(b);return{...b,lista:l,n:l.length,monto:l.reduce((a,x)=>a+x.monto,0)};});
+  const tot=datos.reduce((a,d)=>a+d.monto,0);
+  grafica('chAntig',{type:'bar',
+    data:{labels:datos.map(d=>d.l),datasets:[{data:datos.map(d=>d.monto),backgroundColor:datos.map(d=>d.c),borderRadius:4,barPercentage:.75}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:it=>`${datos[it[0].dataIndex].l} · ${datos[it[0].dataIndex].d}`,
+        label:c=>{const d=datos[c.dataIndex];return[` Monto: ${fmtM(d.monto)}`,` Pólizas: ${fmtN(d.n)}`,` ${fmtP(tot?d.monto/tot*100:0)} del total`];},
+        footer:()=>'Clic para ver las pólizas'}}},
+      scales:{x:{beginAtZero:true,ticks:{callback:ejeM},grid:{color:'#EDF0F4'}},y:{grid:{display:false}}},
+      onHover:(e,el)=>{e.native.target.style.cursor=el.length?'pointer':'default';},
+      onClick:(e,el)=>{if(el.length)drillBanda(datos[el[0].index]);}}});
+  $('tblAntig').innerHTML=`<thead><tr><th>Rango</th><th>Descripción</th><th class="n">Pólizas</th><th class="n">Monto</th><th class="n">% del total</th></tr></thead>
+    <tbody>${datos.map((d,i)=>`<tr class="clic" data-i="${i}" tabindex="0"><td style="white-space:nowrap"><span class="cuad" style="background:${d.c}"></span>${d.l}</td><td>${d.d}</td>
+      <td class="n">${fmtN(d.n)}</td><td class="n">${fmtM(d.monto)}</td><td class="n">${fmtP(tot?d.monto/tot*100:0)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="3">Total</td><td class="n">${fmtM(tot)}</td><td class="n">100%</td></tr></tfoot>`;
+  $('tblAntig').querySelectorAll('tr.clic').forEach(tr=>{
+    const go=()=>drillBanda(datos[+tr.dataset.i]);
+    tr.addEventListener('click',go);tr.addEventListener('keydown',e=>{if(e.key==='Enter')go();});
+  });
+}
+function drillBanda(d){
+  abrirDrill(`${d.l} · ${d.d}`,
+    d.k==='pv'?'Pólizas con mensualidades que vencen en los próximos 15 días. El monto es lo que vence en ese lapso.'
+              :'Ordenadas por saldo vencido. «Días» = días desde la mensualidad más antigua sin pagar.',
+    d.lista.map(x=>x.o).sort((a,b)=>(d.k==='pv'?b.porVencer15-a.porVencer15:b.vencido-a.vencido)),d.k==='pv');
+}
+
+/* ══════════════════ 4. ESTADO DE PÓLIZAS ══════════════════ */
+function pintarEstatus(){
+  const grupos=ORDEN_EST.map(e=>{const l=F.filter(o=>o.est===e);
+    return{e,l,n:l.length,prima:l.reduce((a,o)=>a+o.costo,0),cob:l.reduce((a,o)=>a+o.pagado,0),saldo:l.reduce((a,o)=>a+o.saldo,0)};}).filter(g=>g.n);
+  const tot=F.length,totPrima=grupos.reduce((a,g)=>a+g.prima,0);
+  grafica('chEstatus',{type:'doughnut',
+    data:{labels:grupos.map(g=>g.e),datasets:[{data:grupos.map(g=>g.n),backgroundColor:grupos.map(g=>COL_EST[g.e]),borderColor:'#fff',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,boxHeight:8,padding:12}},
+        tooltip:{callbacks:{label:c=>{const g=grupos[c.dataIndex];return[` ${g.e}: ${fmtN(g.n)} pólizas (${fmtP(g.n/tot*100)})`,` Prima: ${fmtM(g.prima)}`,` Saldo: ${fmtM(g.saldo)}`];},footer:()=>'Clic para ver las pólizas'}}},
+      onHover:(e,el)=>{e.native.target.style.cursor=el.length?'pointer':'default';},
+      onClick:(e,el)=>{if(el.length){const g=grupos[el[0].index];abrirDrill(g.e,`${fmtN(g.n)} pólizas, ordenadas por saldo.`,g.l.slice().sort((a,b)=>b.saldo-a.saldo));}}}});
+  $('tblEstatus').innerHTML=`<thead><tr><th>Estatus</th><th class="n">Pólizas</th><th class="n">%</th><th class="n">Prima</th><th class="n">Cobrado</th><th class="n">Saldo</th></tr></thead>
+    <tbody>${grupos.map((g,i)=>`<tr class="clic" data-i="${i}" tabindex="0"><td>${pill(g.e)}</td><td class="n">${fmtN(g.n)}</td><td class="n">${fmtP(g.n/tot*100)}</td>
+      <td class="n">${fmtM(g.prima)}</td><td class="n">${fmtM(g.cob)}</td><td class="n">${fmtM(g.saldo)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="n">${fmtN(tot)}</td><td class="n">100%</td><td class="n">${fmtM(totPrima)}</td>
+      <td class="n">${fmtM(grupos.reduce((a,g)=>a+g.cob,0))}</td><td class="n">${fmtM(grupos.reduce((a,g)=>a+g.saldo,0))}</td></tr></tfoot>`;
+  $('tblEstatus').querySelectorAll('tr.clic').forEach(tr=>{
+    const g=grupos[+tr.dataset.i];
+    const go=()=>abrirDrill(g.e,`${fmtN(g.n)} pólizas, ordenadas por saldo.`,g.l.slice().sort((a,b)=>b.saldo-a.saldo));
+    tr.addEventListener('click',go);tr.addEventListener('keydown',e=>{if(e.key==='Enter')go();});
+  });
+  if(!grupos.length)$('tblEstatus').innerHTML='<tr><td class="vacio">No hay pólizas con estos filtros.</td></tr>';
+}
+
+/* ══════════════════ DETALLE (drill) ══════════════════ */
+let DRILL=[];
+const MAX_FILAS=500;
+function abrirDrill(titulo,sub,lista,porVencer){
+  DRILL=lista;
+  $('drillTit').textContent=`${titulo} (${fmtN(lista.length)})`;
+  $('drillSub').textContent=sub+(lista.length>MAX_FILAS?` Se muestran las primeras ${MAX_FILAS}; el CSV trae todas.`:'');
+  $('tblDrill').innerHTML=`<thead><tr><th>Póliza</th><th>Cliente</th><th>Teléfono</th><th>Asesor</th><th>Cobrador</th><th>Estatus</th>
+    <th class="n">Días</th><th class="n">${porVencer?'Vence en 15 días':'Saldo vencido'}</th><th class="n">Saldo total</th><th>Fin vigencia</th></tr></thead>
+    <tbody>${lista.slice(0,MAX_FILAS).map(o=>`<tr><td><b>${esc(o.id)}</b></td><td>${esc(o.nombre)}</td><td>${esc(o.tel)}</td><td>${esc(o.asesor)}</td>
+      <td>${esc(o.cobrador)}</td><td>${pill(o.est)}</td><td class="n">${o.antig!==null&&o.vencido>0?o.antig:'—'}</td>
+      <td class="n">${fmtM(porVencer?o.porVencer15:o.vencido)}</td><td class="n">${fmtM(o.saldo)}</td><td>${fmtF(o.fin)}</td></tr>`).join('')||'<tr><td colspan="10" class="vacio">Sin pólizas.</td></tr>'}</tbody>`;
+  $('drill').classList.add('ver');
+  $('drill').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+}
+function cerrarDrill(){$('drill').classList.remove('ver');DRILL=[];}
+$('drillCerrar').addEventListener('click',cerrarDrill);
+$('drillCsv').addEventListener('click',()=>{
+  const cab=['Poliza','Cliente','Telefono','Asesor','Cobrador','Municipio','Estatus','Dias vencido','Saldo vencido','Vence 15 dias','Saldo total','Inicio vigencia','Fin vigencia'];
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const filas=DRILL.map(o=>[o.id,o.nombre,o.tel,o.asesor,o.cobrador,o.muni,o.est,o.vencido>0?o.antig:'',o.vencido.toFixed(2),o.porVencer15.toFixed(2),o.saldo.toFixed(2),fmtF(o.ini),fmtF(o.fin)].map(q).join(','));
+  const blob=new Blob(['\ufeff'+[cab.map(q).join(','),...filas].join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=$('drillTit').textContent.replace(/\s*\(\d[\d,]*\)$/,'').replace(/[^\wÁÉÍÓÚáéíóúÑñ]+/g,'_')+'.csv';
+  a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+
+if(window.innerWidth<700){$('filtros').classList.add('cerrado');$('btnPlegar').textContent='Mostrar';$('btnPlegar').setAttribute('aria-expanded','false');}
+cargar();
+</script>
+</body>
+</html>
