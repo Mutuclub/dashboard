@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard MUTUAL v2</title>
+<style>
+:root{
+  --bg:#f4f5f2; --surface:#fff; --ink:#1c2420; --muted:#66706b; --line:#dfe3df;
+  --accent:#145c4d;
+  --nueva:#1f7a66; --renov:#5b8fd6; --otro:#a7b0ab; --cancel:#c2412d;
+  --r0:#f2c14e; --r1:#e98a3b; --r2:#d1495b; --r3:#7d1d3f; --ok:#cfe3dc;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px}
+h1{margin:0;font-size:24px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{border:0;background:none;padding:10px 16px;font:600 14px inherit;font-family:inherit;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.tab:disabled{cursor:default;opacity:.55}
+.tab small{font-weight:400;margin-left:6px}
+.filtros{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.filtros label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+select,input{font:14px inherit;font-family:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:7px 12px;font:600 13px inherit;font-family:inherit;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:600}
+.kpi .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .d{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.card.full{grid-column:1/-1}
+.card h2{margin:0;font-size:15px}
+.card .nota{color:var(--muted);font-size:12px;margin:2px 0 10px}
+.leyenda{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.leyenda i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg{display:block;max-width:100%;height:auto}
+svg text{font-family:"Segoe UI",system-ui,sans-serif;fill:var(--ink)}
+svg .eje{fill:var(--muted);font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;margin-top:10px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px}
+tfoot td{font-weight:700}
+.tabla-scroll{overflow-x:auto}
+.aviso{background:#fff7e6;border:1px solid #f0d9a8;border-radius:8px;padding:8px 12px;font-size:13px;color:#7a5410}
+.vacio{color:var(--muted);padding:18px 0;text-align:center}
+#carga{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Dashboard MUTUAL</h1>
+      <div class="sub" id="corte">Cargando datos…</div>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true">Pólizas</button>
+    <button class="tab" role="tab" aria-selected="false" disabled>Asesor <small>próxima entrega</small></button>
+    <button class="tab" role="tab" aria-selected="false" disabled>Cobrador <small>próxima entrega</small></button>
+  </div>
+
+  <div id="carga" hidden>
+    <p>No se encontró <b>dashboard.json</b> junto a esta página.</p>
+    <p class="sub">Para revisar sin publicar, elige el archivo a mano:</p>
+    <input type="file" id="archivo" accept=".json,application/json">
+  </div>
+
+  <div id="app" hidden>
+    <div class="filtros">
+      <label>Empresa<select id="fEmp"></select></label>
+      <label>Desde<input type="month" id="fDesde"></label>
+      <label>Hasta<input type="month" id="fHasta"></label>
+      <label>Ver ventas en
+        <span class="seg" id="fMedida">
+          <button type="button" data-m="n" aria-pressed="true">Pólizas</button>
+          <button type="button" data-m="imp" aria-pressed="false">Importe</button>
+        </span>
+      </label>
+    </div>
+
+    <div id="avisos"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid">
+      <section class="card full">
+        <h2>Venta por mes y tipo de póliza</h2>
+        <p class="nota">Por mes de inicio de vigencia. "Canceladas" son las vendidas ese mes que hoy están canceladas.</p>
+        <div class="leyenda" id="leyVentas"></div>
+        <div id="gVentas"></div>
+        <div class="tabla-scroll"><table id="tVentas"></table></div>
+      </section>
+
+      <section class="card">
+        <h2>Morosidad por tipo de póliza</h2>
+        <p class="nota" id="notaMoros1"></p>
+        <div class="leyenda leyRangos"></div>
+        <div id="gMorosTipo"></div>
+        <div class="tabla-scroll"><table id="tMorosTipo"></table></div>
+      </section>
+
+      <section class="card">
+        <h2>Venta por cobertura</h2>
+        <p class="nota" id="notaVentaCob"></p>
+        <div id="gVentaCob"></div>
+      </section>
+
+      <section class="card full">
+        <h2>Morosidad por cobertura</h2>
+        <p class="nota" id="notaMoros2"></p>
+        <div class="leyenda leyRangos"></div>
+        <div id="gMorosCob"></div>
+        <div class="tabla-scroll"><table id="tMorosCob"></table></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat("es-MX");
+const mf = new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN",maximumFractionDigits:0});
+const pf = x => (isFinite(x) ? (x*100).toFixed(1) : "0.0") + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const mesTxt = m => MESES[+m.slice(5,7)-1] + " " + m.slice(2,4);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+let D = null, medida = "n";
+
+/* ---------- carga ---------- */
+async function cargar(){
+  try{
+    const r = await fetch("dashboard.json?t=" + Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error(r.status);
+    iniciar(await r.json());
+  }catch(e){
+    $("corte").textContent = "Sin datos";
+    $("carga").hidden = false;
+  }
+}
+$("archivo").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const lr = new FileReader();
+  lr.onload = () => { try{ iniciar(JSON.parse(lr.result)); $("carga").hidden = true; }catch(err){ alert("El archivo no es un dashboard.json válido."); } };
+  lr.readAsText(f);
+});
+
+function iniciar(datos){
+  D = datos;
+  $("app").hidden = false;
+  $("corte").textContent = "Datos al " + D.generado.replace(/(\d{4})-(\d\d)-(\d\d)/,"$3/$2/$1") + " · se actualiza con cada corrida de Access";
+  $("fEmp").innerHTML = `<option value="">Todas</option>` +
+    D.dims.emp.map((e,i)=>({e,i})).sort((a,b)=>a.e.localeCompare(b.e)).map(o=>`<option value="${o.i}">${esc(o.e)}</option>`).join("");
+  const hoy = D.hoy.slice(0,7);
+  const ini = new Date(+hoy.slice(0,4), +hoy.slice(5,7)-12, 1);
+  $("fDesde").value = ini.getFullYear() + "-" + String(ini.getMonth()+1).padStart(2,"0");
+  $("fHasta").value = hoy;
+  $("avisos").innerHTML = (D.avisos||[]).map(a=>`<div class="aviso">${esc(a)}</div>`).join("");
+  const ley = D.rangos.map((r,i)=>`<span><i style="background:${css("--r"+i)}"></i>${esc(r)} días</span>`).join("");
+  document.querySelectorAll(".leyRangos").forEach(el=>el.innerHTML = ley);
+  render();
+}
+
+["fEmp","fDesde","fHasta"].forEach(id=>$(id).addEventListener("change", render));
+$("fMedida").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  medida = b.dataset.m;
+  $("fMedida").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  render();
+});
+
+/* ---------- cálculo ---------- */
+function mesesEntre(a,b){
+  const out = []; let y = +a.slice(0,4), m = +a.slice(5,7);
+  while(true){
+    const k = y + "-" + String(m).padStart(2,"0");
+    if(k > b || out.length > 120) break;
+    out.push(k); if(++m > 12){ m = 1; y++; }
+  }
+  return out;
+}
+
+function render(){
+  if(!D) return;
+  const emp = $("fEmp").value, eIdx = emp === "" ? null : +emp;
+  let desde = $("fDesde").value, hasta = $("fHasta").value;
+  if(!desde || !hasta) return;
+  if(desde > hasta) [desde, hasta] = [hasta, desde];
+  const meses = mesesEntre(desde, hasta);
+  const T = D.dims.tipo, iNueva = T.indexOf("Nueva"), iRenov = T.indexOf("Renovación");
+  const grupo = t => t === iNueva ? "nueva" : t === iRenov ? "renov" : "otro";
+
+  // Ventas
+  const porMes = Object.fromEntries(meses.map(m=>[m,{nueva:[0,0],renov:[0,0],otro:[0,0],canc:[0,0]}]));
+  const porCob = {};
+  for(const [f,e,a,c,t,n,imp,canc] of D.ventas){
+    if(eIdx !== null && e !== eIdx) continue;
+    const m = f.slice(0,7); if(!porMes[m]) continue;
+    const g = porMes[m][grupo(t)]; g[0]+=n; g[1]+=imp;
+    porMes[m].canc[0] += canc; porMes[m].canc[1] += n ? imp*canc/n : 0;
+    const pc = porCob[c] || (porCob[c] = [0,0]); pc[0]+=n; pc[1]+=imp;
+  }
+  const tot = {nueva:[0,0],renov:[0,0],otro:[0,0],canc:[0,0]};
+  meses.forEach(m=>["nueva","renov","otro","canc"].forEach(k=>{tot[k][0]+=porMes[m][k][0]; tot[k][1]+=porMes[m][k][1];}));
+  const totN = tot.nueva[0]+tot.renov[0]+tot.otro[0], totImp = tot.nueva[1]+tot.renov[1]+tot.otro[1];
+
+  // Morosidad (corte al día)
+  const porTipo = {}, porCobM = {}; let activas = 0, atraso = 0, r90 = 0;
+  for(const [e,a,cb,c,t,ok,...rg] of D.morosidad){
+    if(eIdx !== null && e !== eIdx) continue;
+    const s = rg.reduce((x,y)=>x+y,0);
+    activas += ok + s; atraso += s; r90 += rg[3];
+    const pt = porTipo[t] || (porTipo[t] = [0,0,0,0,0]);
+    const pc = porCobM[c] || (porCobM[c] = [0,0,0,0,0]);
+    pt[0]+=ok; pc[0]+=ok; rg.forEach((v,i)=>{pt[i+1]+=v; pc[i+1]+=v;});
+  }
+
+  // KPIs
+  const val = x => medida === "n" ? nf.format(x[0]) : mf.format(x[1]);
+  $("kpis").innerHTML = [
+    ["Vendidas en el periodo", medida==="n" ? nf.format(totN) : mf.format(totImp), medida==="n" ? mf.format(totImp) : nf.format(totN)+" pólizas"],
+    ["Nuevas", val(tot.nueva), pf(tot.nueva[0]/totN)+" del total"],
+    ["Renovaciones", val(tot.renov), pf(tot.renov[0]/totN)+" del total"],
+    ["Canceladas (de lo vendido)", nf.format(tot.canc[0]), pf(tot.canc[0]/totN)+" de lo vendido"],
+    ["Cartera activa", nf.format(activas), "vigentes, sin canceladas"],
+    ["Con atraso", nf.format(atraso), pf(atraso/activas)+" de la cartera"],
+    ["90+ días", nf.format(r90), pf(r90/activas)+" de la cartera"]
+  ].map(([l,v,d])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join("");
+
+  // Venta por mes
+  const series = [["nueva","Nueva","--nueva"],["renov","Renovación","--renov"]];
+  if(tot.otro[0]) series.push(["otro","Otro / sin tipo","--otro"]);
+  const k = medida === "n" ? 0 : 1, fmt = medida === "n" ? (x=>nf.format(x)) : (x=>mf.format(x));
+  $("leyVentas").innerHTML = series.map(s=>`<span><i style="background:${css(s[2])}"></i>${s[1]}</span>`).join("") +
+    `<span><i style="background:${css("--cancel")};border-radius:50%"></i>Canceladas (de lo vendido)</span>`;
+  $("gVentas").innerHTML = barrasMes(ancho("gVentas"), meses, series.map(s=>({nombre:s[1], color:css(s[2]), valores:meses.map(m=>porMes[m][s[0]][k])})),
+                                     meses.map(m=>porMes[m].canc[k]), fmt);
+  $("tVentas").innerHTML = `<thead><tr><th>Mes</th>${series.map(s=>`<th>${s[1]}</th>`).join("")}<th>Total</th><th>Importe</th><th>Canceladas</th></tr></thead><tbody>` +
+    meses.slice().reverse().map(m=>{
+      const p = porMes[m], n = p.nueva[0]+p.renov[0]+p.otro[0], imp = p.nueva[1]+p.renov[1]+p.otro[1];
+      return `<tr><td>${mesTxt(m)}</td>${series.map(s=>`<td>${nf.format(p[s[0]][0])}</td>`).join("")}<td>${nf.format(n)}</td><td>${mf.format(imp)}</td><td>${nf.format(p.canc[0])}</td></tr>`;
+    }).join("") +
+    `</tbody><tfoot><tr><td>Total</td>${series.map(s=>`<td>${nf.format(tot[s[0]][0])}</td>`).join("")}<td>${nf.format(totN)}</td><td>${mf.format(totImp)}</td><td>${nf.format(tot.canc[0])}</td></tr></tfoot>`;
+
+  // Morosidad por tipo
+  const notaCorte = "Corte al " + D.hoy.split("-").reverse().join("/") + ". Cartera activa, sin vencidas ni canceladas. Días desde la mensualidad vencida.";
+  $("notaMoros1").textContent = notaCorte;
+  $("notaMoros2").textContent = notaCorte;
+  const filasTipo = Object.entries(porTipo).map(([t,v])=>({nombre:T[t], v})).sort((a,b)=>suma(b.v)-suma(a.v));
+  $("gMorosTipo").innerHTML = barrasRangos(ancho("gMorosTipo"), filasTipo);
+  $("tMorosTipo").innerHTML = tablaMoros("Tipo", filasTipo);
+
+  // Morosidad por cobertura
+  const C = D.dims.cobertura;
+  const filasCob = Object.entries(porCobM).map(([c,v])=>({nombre:C[c], v})).sort((a,b)=>suma(b.v)-suma(a.v));
+  $("gMorosCob").innerHTML = barrasRangos(ancho("gMorosCob"), filasCob);
+  $("tMorosCob").innerHTML = tablaMoros("Cobertura", filasCob);
+
+  // Venta por cobertura
+  $("notaVentaCob").textContent = `${mesTxt(desde)} a ${mesTxt(hasta)} · ${medida === "n" ? "pólizas" : "importe"}`;
+  const filasVC = Object.entries(porCob).map(([c,v])=>({nombre:C[c], valor:v[k], otro:v[1-k]})).sort((a,b)=>b.valor-a.valor);
+  $("gVentaCob").innerHTML = barrasSimples(ancho("gVentaCob"), filasVC, fmt, medida === "n" ? (x=>mf.format(x)) : (x=>nf.format(x)+" pól."));
+}
+
+const ancho = id => Math.max($(id).clientWidth, 300);
+let tRes; addEventListener("resize", ()=>{ clearTimeout(tRes); tRes = setTimeout(render, 150); });
+const suma = v => v.slice(1).reduce((a,b)=>a+b,0);
+
+function tablaMoros(titulo, filas){
+  if(!filas.length) return "";
+  const tot = [0,0,0,0,0]; filas.forEach(f=>f.v.forEach((x,i)=>tot[i]+=x));
+  const fila = (n,v,tag) => `<tr><${tag}>${esc(n)}</${tag}><${tag}>${nf.format(v[0]+suma(v))}</${tag}>${v.slice(1).map(x=>`<${tag}>${nf.format(x)}</${tag}>`).join("")}<${tag}>${nf.format(suma(v))}</${tag}><${tag}>${pf(suma(v)/(v[0]+suma(v)))}</${tag}></tr>`;
+  return `<thead><tr><th>${titulo}</th><th>Activas</th>${D.rangos.map(r=>`<th>${r}</th>`).join("")}<th>Con atraso</th><th>% atraso</th></tr></thead><tbody>` +
+    filas.map(f=>fila(f.nombre,f.v,"td")).join("") + `</tbody><tfoot>${fila("Total",tot,"td")}</tfoot>`;
+}
+
+/* ---------- gráficas SVG (sin librerías externas) ---------- */
+function escala(max){
+  if(max <= 0) return {max:1, pasos:[0,1]};
+  const p = Math.pow(10, Math.floor(Math.log10(max))), m = max/p;
+  const paso = (m <= 2 ? .5 : m <= 5 ? 1 : 2) * p;
+  const tope = Math.ceil(max/paso)*paso, pasos = [];
+  for(let v=0; v<=tope+1e-9; v+=paso) pasos.push(v);
+  return {max:tope, pasos};
+}
+const corto = x => x >= 1e6 ? (x/1e6).toFixed(1).replace(/\.0$/,"")+" M" : x >= 1e3 ? (x/1e3).toFixed(x>=1e4?0:1).replace(/\.0$/,"")+" k" : nf.format(Math.round(x));
+
+function barrasMes(W, meses, series, canceladas, fmt){
+  const H = 300, L = 54, R = 10, Tp = 12, B = 34;
+  const totales = meses.map((_,i)=>series.reduce((a,s)=>a+s.valores[i],0));
+  const {max, pasos} = escala(Math.max(...totales, ...canceladas));
+  const y = v => Tp + (H-Tp-B) * (1 - v/max);
+  const bw = (W-L-R)/meses.length, ancho = Math.min(46, bw*.62);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Venta por mes">`;
+  pasos.forEach(v=>{ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${css("--line")}"/><text class="eje" x="${L-6}" y="${y(v)+4}" text-anchor="end">${corto(v)}</text>`; });
+  meses.forEach((m,i)=>{
+    const cx = L + bw*i + bw/2; let base = 0;
+    series.forEach(se=>{
+      const v = se.valores[i]; if(!v) return;
+      s += `<rect x="${cx-ancho/2}" y="${y(base+v)}" width="${ancho}" height="${y(base)-y(base+v)}" fill="${se.color}"><title>${mesTxt(m)} · ${se.nombre}: ${fmt(v)}</title></rect>`;
+      base += v;
+    });
+    if(totales[i]) s += `<text x="${cx}" y="${y(totales[i])-5}" text-anchor="middle" font-size="11" font-weight="600">${corto(totales[i])}</text>`;
+    if(canceladas[i]) s += `<circle cx="${cx+ancho/2+4}" cy="${y(canceladas[i])}" r="4" fill="${css("--cancel")}"><title>${mesTxt(m)} · Canceladas: ${fmt(canceladas[i])}</title></circle>`;
+    if(bw >= 34 || i % 2 === 0) s += `<text class="eje" x="${cx}" y="${H-B+16}" text-anchor="middle">${mesTxt(m)}</text>`;
+  });
+  return s + `</svg>`;
+}
+
+function barrasRangos(W, filas){
+  if(!filas.length) return `<div class="vacio">Sin datos para este filtro.</div>`;
+  const L = Math.min(190, W*.36), R = 92, fh = 26, H = filas.length*fh + 8;
+  const max = Math.max(...filas.map(f=>suma(f.v)), 1);
+  const x = v => (W-L-R) * v / max;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Morosidad por rango de días">`;
+  filas.forEach((f,i)=>{
+    const yy = 4 + i*fh; let base = 0;
+    s += `<text x="${L-8}" y="${yy+fh/2+4}" text-anchor="end" font-size="12">${esc(recorta(f.nombre, Math.floor(L/7)))}<title>${esc(f.nombre)}</title></text>`;
+    f.v.slice(1).forEach((v,r)=>{
+      if(!v) return;
+      s += `<rect x="${L+x(base)}" y="${yy+4}" width="${Math.max(x(v),1)}" height="${fh-8}" fill="${css("--r"+r)}"><title>${esc(f.nombre)} · ${D.rangos[r]} días: ${nf.format(v)}</title></rect>`;
+      base += v;
+    });
+    const act = f.v[0] + suma(f.v);
+    s += `<text x="${L+x(base)+6}" y="${yy+fh/2+4}" font-size="11" class="eje">${nf.format(suma(f.v))} · ${pf(suma(f.v)/act)}</text>`;
+  });
+  return s + `</svg>`;
+}
+
+function barrasSimples(W, filas, fmt, fmtOtro){
+  if(!filas.length) return `<div class="vacio">Sin ventas en este periodo.</div>`;
+  const L = Math.min(190, W*.36), R = 92, fh = 26, H = filas.length*fh + 8;
+  const max = Math.max(...filas.map(f=>f.valor), 1);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Venta por cobertura">`;
+  filas.forEach((f,i)=>{
+    const yy = 4 + i*fh, w = Math.max((W-L-R)*f.valor/max, 1);
+    s += `<text x="${L-8}" y="${yy+fh/2+4}" text-anchor="end" font-size="12">${esc(recorta(f.nombre, Math.floor(L/7)))}<title>${esc(f.nombre)}</title></text>`;
+    s += `<rect x="${L}" y="${yy+4}" width="${w}" height="${fh-8}" fill="${css("--nueva")}"><title>${esc(f.nombre)}: ${fmt(f.valor)} · ${fmtOtro(f.otro)}</title></rect>`;
+    s += `<text x="${L+w+6}" y="${yy+fh/2+4}" font-size="11" class="eje">${fmt(f.valor)}</text>`;
+  });
+  return s + `</svg>`;
+}
+const recorta = (t,n) => t.length > n ? t.slice(0,n-1)+"…" : t;
+
+cargar();
+</script>
+</body>
+</html>
