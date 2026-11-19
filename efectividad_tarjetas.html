@@ -80,6 +80,8 @@ tr.tot td{font-weight:600;border-top:2px solid var(--axis)}
 @keyframes s{to{transform:rotate(360deg)}}
 .note{font-size:12px;color:var(--ink2);background:#fff8e6;border:1px solid #f3dfa6;border-radius:8px;padding:8px 10px;margin-bottom:12px}
 .printhead{display:none}
+.sync{font-size:12px;opacity:.85;display:inline-flex;align-items:center;gap:6px}
+.sync .dot{width:8px;height:8px}
 @page{size:letter landscape;margin:10mm}
 @media print{
   #detTitle,#detHint,header,.filters,.kpis,.grid2,#cardRank,.toolbar .btn,.toolbar select,.noprint{display:none!important}
@@ -100,8 +102,9 @@ tr.tot td{font-weight:600;border-top:2px solid var(--axis)}
     <div class="sub" id="srcInfo">Sin datos cargados</div>
   </div>
   <div class="sp"></div>
-  <button class="btn" id="btnLoad">Cargar MUTUAL_2026.xlsx</button>
-  <button class="btn noprint" id="btnClear" style="display:none">Borrar datos</button>
+  <span class="sync" id="syncState"></span>
+  <button class="btn" id="btnSync">⟳ Actualizar datos</button>
+  <button class="btn" id="btnLoad" title="Respaldo: cargar el archivo desde tu computadora">Cargar archivo…</button>
   <input type="file" id="file" accept=".xlsx,.xls" hidden>
 </header>
 
@@ -109,10 +112,14 @@ tr.tot td{font-weight:600;border-top:2px solid var(--axis)}
 
 <main>
   <section id="empty" class="empty">
-    <h2>Carga la exportación de Access</h2>
+    <div id="emptyAuto"><div class="spin" style="margin:0 auto 14px"></div><h2>Descargando MUTUAL_2026.xlsx…</h2><p>Se toma automáticamente del repositorio, el mismo archivo que actualiza actualizar_mutual.py desde Access.</p></div>
+    <div id="emptyManual" style="display:none">
+    <h2>No se encontró MUTUAL_2026.xlsx en el repositorio</h2>
+    <p id="emptyErr" style="color:var(--crit);font-size:13px"></p>
     <p>Necesita las hojas <b>Bd Clientes</b>, <b>Bd Pagos</b>, <b>Pagos Historicos</b> y <b>Historial Envios</b>.</p>
     <div class="drop" id="drop">Arrastra aquí MUTUAL_2026.xlsx<br><br><button class="btn primary" id="btnLoad2">Elegir archivo</button></div>
     <p style="font-size:12px;color:var(--muted)">El archivo se procesa en tu computadora; no se sube a ningún servidor.</p>
+    </div>
   </section>
 
   <section id="app" style="display:none">
@@ -183,6 +190,12 @@ tr.tot td{font-weight:600;border-top:2px solid var(--axis)}
 
 <script>
 /* ===================== Configuración ===================== */
+// Dónde buscar MUTUAL_2026.xlsx (en orden). Rutas del mismo sitio mutuclub.github.io:
+//  1) junto a esta página (si subes el archivo a este repo)
+//  2) el repo de Reportes de Cobranza  3) el repo de Consulta de Pólizas
+// Así no hace falta subir el archivo a otro repo más: usa el que ya actualizas.
+const DATA_URLS = ['MUTUAL_2026.xlsx', '/reportes_cobranza/MUTUAL_2026.xlsx', '/consulta_polizas/MUTUAL_2026.xlsx'];
+const REVISAR_CADA_MIN = 10;   // cada cuánto revisa si el archivo cambió (con la pestaña abierta)
 const NO_CAMPO = ['DEPOSITO','PAGO EN OFICINA','ASESOR','FORANEO'];   // "cobradores" que no son de campo
 const META_VERDE = 80, META_AMARILLO = 60;
 const SEMANAS_TENDENCIA = 12;
@@ -310,18 +323,23 @@ function guardar(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DATA)); }ca
 function recuperar(){ try{ const s=localStorage.getItem(LS_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
 
 /* ===================== Carga de archivo ===================== */
+const HOJAS=['Bd Clientes','Bd Pagos','Pagos Historicos','Historial Envios'];
+function setSync(txt,color){ $('syncState').innerHTML=`<span class="dot" style="background:${color}"></span>${txt}`; }
+function procesarBuffer(buf,nombre,meta){
+  const wb=XLSX.read(new Uint8Array(buf),{type:'array',dense:true,sheets:HOJAS});
+  const d=procesarLibro(wb,nombre);
+  Object.assign(d,meta||{});
+  DATA=d; guardar(); iniciar(true);
+}
+// --- Respaldo: carga manual desde la computadora
 function cargarArchivo(file){
   if(!file) return;
   $('loading').style.display='flex'; $('loadMsg').textContent='Leyendo '+file.name+'… (puede tardar unos segundos)';
   const rd=new FileReader();
   rd.onload=ev=>{
     setTimeout(()=>{
-      try{
-        const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',dense:true,sheets:['Bd Clientes','Bd Pagos','Pagos Historicos','Historial Envios']});
-        $('loadMsg').textContent='Calculando efectividad…';
-        DATA=procesarLibro(wb,file.name);
-        guardar(); iniciar();
-      }catch(err){ alert('No se pudo procesar el archivo:\n'+err.message); console.error(err); }
+      try{ procesarBuffer(ev.target.result,file.name,{origen:'manual',version:null,modificado:file.lastModified||null}); setSync('Cargado manualmente','#fab219'); }
+      catch(err){ alert('No se pudo procesar el archivo:\n'+err.message); console.error(err); }
       $('loading').style.display='none';
     },30);
   };
@@ -333,12 +351,56 @@ const dz=$('drop');
 dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
 dz.ondragleave=()=>dz.classList.remove('over');
 dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');cargarArchivo(e.dataTransfer.files[0]);};
-$('btnClear').onclick=()=>{ if(!confirm('¿Borrar los datos guardados en este navegador?')) return; try{localStorage.removeItem(LS_KEY);}catch(e){} location.reload(); };
+
+// --- Automático: lee MUTUAL_2026.xlsx del repositorio
+let URL_OK=null, sincronizando=false;
+async function versionRemota(url){ // ETag / Last-Modified sin descargar el archivo
+  const r=await fetch(url,{method:'HEAD',cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const lm=r.headers.get('Last-Modified');
+  return {version:(r.headers.get('ETag')||'')+'|'+(lm||'')+'|'+(r.headers.get('Content-Length')||''), modificado: lm?Date.parse(lm):null};
+}
+async function sincronizar(forzar){
+  if(sincronizando) return; sincronizando=true;
+  const hayDatos=!!DATA;
+  if(forzar && hayDatos){ $('loading').style.display='flex'; $('loadMsg').textContent='Buscando MUTUAL_2026.xlsx…'; }
+  setSync('Revisando actualización…','#898781');
+  let ultimoErr='';
+  try{
+    for(const url of (URL_OK?[URL_OK,...DATA_URLS.filter(u=>u!==URL_OK)]:DATA_URLS)){
+      let v;
+      try{ v=await versionRemota(url); }catch(e){ ultimoErr=url+': '+e.message; continue; }
+      URL_OK=url;
+      if(!forzar && DATA && DATA.origen==='repo' && DATA.version===v.version){ setSync('Datos al día · '+fmtFH(DATA.modificado||DATA.cargado),'#0ca30c'); return; }
+      $('loading').style.display= hayDatos||forzar ? 'flex' : 'none';
+      $('loadMsg').textContent='Descargando MUTUAL_2026.xlsx… (unos segundos)';
+      const r=await fetch(url,{cache:'no-store'});
+      if(!r.ok){ ultimoErr=url+': HTTP '+r.status; continue; }
+      const buf=await r.arrayBuffer();
+      $('loadMsg').textContent='Calculando efectividad…';
+      await new Promise(res=>setTimeout(res,30));
+      procesarBuffer(buf,'MUTUAL_2026.xlsx',{origen:'repo',url,version:v.version,modificado:v.modificado});
+      setSync('Datos al día · '+fmtFH(DATA.modificado||DATA.cargado),'#0ca30c');
+      return;
+    }
+    throw new Error(ultimoErr||'no encontrado');
+  }catch(err){
+    console.warn('Sincronización:',err);
+    if(DATA){ setSync('Sin conexión al repositorio · mostrando datos guardados','#d03b3b'); }
+    else { $('emptyAuto').style.display='none'; $('emptyManual').style.display=''; $('emptyErr').textContent='Detalle: '+err.message; setSync('Sin datos','#d03b3b'); }
+  }finally{ sincronizando=false; $('loading').style.display='none'; }
+}
+$('btnSync').onclick=()=>sincronizar(true);
+setInterval(()=>{ if(document.visibilityState==='visible') sincronizar(false); }, REVISAR_CADA_MIN*60000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && DATA && Date.now()-(DATA._rev||0)>REVISAR_CADA_MIN*60000){ DATA._rev=Date.now(); sincronizar(false); } });
+const fmtFH = t => { if(!t) return ''; const d=new Date(t); return fmtF(t)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 
 /* ===================== Inicialización de filtros ===================== */
-function iniciar(){
-  $('empty').style.display='none'; $('app').style.display='block'; $('btnClear').style.display='';
-  $('srcInfo').textContent=DATA.archivo+' · cargado '+fmtF(DATA.cargado)+' · '+int(DATA.envios.length)+' envíos (último '+fmtF(DATA.maxEnvio)+')';
+function iniciar(conservar){
+  const prev = conservar && $('app').style.display!=='none' ? {semana:ST.semana,mes:ST.mes,desde:ST.desde,hasta:ST.hasta,emp:ST.emp} : null;
+  $('empty').style.display='none'; $('app').style.display='block';
+  $('srcInfo').textContent=(DATA.origen==='repo'?'MUTUAL_2026.xlsx del repositorio':DATA.archivo+' (carga manual)')+
+    (DATA.modificado?' · actualizado '+fmtFH(DATA.modificado):'')+' · '+int(DATA.envios.length)+' envíos (último '+fmtF(DATA.maxEnvio)+')';
   const sem=[...new Set(DATA.envios.map(e=>lunes(e.f)))].sort((a,b)=>b-a);
   $('selSemana').innerHTML=sem.map(s=>`<option value="${s}">${semLabel(s)}</option>`).join('');
   const meses=[...new Set(DATA.envios.map(e=>{const d=new Date(e.f);return d.getFullYear()*100+d.getMonth();}))].sort((a,b)=>b-a);
@@ -350,6 +412,12 @@ function iniciar(){
   $('dDesde').value=isoDate(ST.desde); $('dHasta').value=isoDate(ST.hasta);
   const emps=[...new Set(DATA.envios.map(e=>e.emp))].sort();
   $('selEmp').innerHTML='<option value="">Todas</option>'+emps.map(e=>`<option>${esc(e)}</option>`).join('');
+  if(prev){ // tras una actualización automática, respeta lo que el usuario estaba viendo
+    if(sem.includes(prev.semana)){ ST.semana=prev.semana; $('selSemana').value=ST.semana; }
+    if(meses.includes(prev.mes)){ ST.mes=prev.mes; $('selMes').value=ST.mes; }
+    if(prev.desde!=null){ ST.desde=prev.desde; ST.hasta=prev.hasta; $('dDesde').value=isoDate(ST.desde); $('dHasta').value=isoDate(ST.hasta); }
+    if(emps.includes(prev.emp)){ ST.emp=prev.emp; $('selEmp').value=ST.emp; } else ST.emp='';
+  } else { ST.emp=''; }
   llenarCobradores(); render();
 }
 const isoDate = t => { const d=new Date(t); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
@@ -556,7 +624,11 @@ $('btnXls').onclick=()=>{
 };
 
 /* ===================== Arranque ===================== */
-(function(){ const d=recuperar(); if(d && d.envios){ DATA=d; iniciar(); } })();
+(function(){
+  const d=recuperar();
+  if(d && d.envios){ DATA=d; DATA._rev=Date.now(); iniciar(); setSync('Datos guardados · revisando…','#898781'); }
+  sincronizar(false);   // siempre revisa el repositorio al abrir
+})();
 </script>
 </body>
 </html>
